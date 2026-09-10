@@ -1,0 +1,132 @@
+@"
+# ============================================
+# IDE & Editor
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# ============================================
+# Backend (Java/Maven)
+# ============================================
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.mvn/
+mvn
+mvnw
+mvnw.cmd
+
+# ============================================
+# Frontend (Node/React)
+# ============================================
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# ============================================
+# Environment & Secrets (CRITICAL)
+# ============================================
+*.properties
+!*.example.properties
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+secrets/
+private/
+credentials/
+
+# ============================================
+# Database
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+pgpass
+pgpassfile
+
+# ============================================
+# Logs
+# ============================================
+logs/
+*.log
+*.log.*
+log/
+
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ============================================
+# Git
+# ============================================
+.git/
+.gitattributes
+
+# ============================================
+# SSH & Security (CRITICAL)
+# ============================================
+.ssh/
+~/.ssh/
+id_rsa
+id_rsa.pub
+known_hosts
+.aws/
+.credentials
+.kube/
+
+# ============================================
+# Personal Files (User Home)
+# ============================================
+.aws/
+.azure/
+.config/
+.gnupg/
+.ssh/
+.kube/
+.local/
+.cache/
+.gradle/
+.m2/
+.npm/
+.pnpm-global/
+.v8flags.*
+.viminfo
+
+# ============================================
+# Project Specific
+# ============================================
+.claude/
+.claude.json
+*.tmp
+temp/
+"@ | Set-Content ".gitignore"
