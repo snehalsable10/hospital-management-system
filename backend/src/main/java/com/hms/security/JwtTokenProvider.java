@@ -1,0 +1,133 @@
+package com.hms.security;
+
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import javax.crypto.SecretKey;
+
+@Component
+@RequiredArgsConstructor
+public class JwtTokenProvider {
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.expiration}")
+    private Long jwtExpiration;
+
+    /**
+     * Generate JWT token for user
+     * @param userId - user id
+     * @param username - username
+     * @param role - user role
+     * @return JWT token string
+     */
+    public String generateToken(Long userId, String username, String role) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+
+        return Jwts.builder()
+                .setSubject(String.valueOf(userId))
+                .claim("username", username)
+                .claim("role", role)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    /**
+     * Get user ID from token
+     * @param token - JWT token
+     * @return user id
+     */
+    public Long getUserIdFromToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return Long.parseLong(claims.getSubject());
+    }
+
+    /**
+     * Get username from token
+     * @param token - JWT token
+     * @return username
+     */
+    public String getUsernameFromToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return (String) claims.get("username");
+    }
+
+    /**
+     * Get role from token
+     * @param token - JWT token
+     * @return user role
+     */
+    public String getRoleFromToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return (String) claims.get("role");
+    }
+
+    /**
+     * Validate JWT token
+     * @param token - JWT token
+     * @return true if token is valid, false otherwise
+     */
+    public boolean validateToken(String token) {
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (ExpiredJwtException ex) {
+            System.err.println("Expired JWT token: " + ex.getMessage());
+            return false;
+        } catch (UnsupportedJwtException ex) {
+            System.err.println("Unsupported JWT token: " + ex.getMessage());
+            return false;
+        } catch (MalformedJwtException ex) {
+            System.err.println("Invalid JWT token: " + ex.getMessage());
+            return false;
+        } catch (SignatureException ex) {
+            System.err.println("JWT signature validation failed: " + ex.getMessage());
+            return false;
+        } catch (IllegalArgumentException ex) {
+            System.err.println("JWT claims string is empty: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Extract token from Authorization header
+     * @param authHeader - Authorization header value
+     * @return JWT token (without "Bearer " prefix)
+     */
+    public String extractTokenFromHeader(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
+    }
+
+}
