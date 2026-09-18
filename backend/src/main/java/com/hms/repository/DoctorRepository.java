@@ -1,6 +1,8 @@
 package com.hms.repository;
 
 import com.hms.entity.Doctor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,4 +17,8 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     List<Doctor> findByDepartmentId(Long departmentId);
     boolean existsByEmail(String email);
     boolean existsByLicenseNumber(String licenseNumber);
+
+    // Paginated methods for performance optimization
+    Page<Doctor> findBySpecialization(String specialization, Pageable pageable);
+    Page<Doctor> findByDepartmentId(Long departmentId, Pageable pageable);
 }

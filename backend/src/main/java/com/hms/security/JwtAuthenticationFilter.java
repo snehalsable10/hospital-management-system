@@ -1,10 +1,12 @@
 package com.hms.security;
 
+import com.hms.service.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,9 +18,11 @@ import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, 
@@ -34,35 +38,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // Extract token (remove "Bearer " prefix)
                 String token = jwtTokenProvider.extractTokenFromHeader(authHeader);
 
-                // Validate token
-                if (token != null && jwtTokenProvider.validateToken(token)) {
-                    // Extract user information from token
-                    Long userId = jwtTokenProvider.getUserIdFromToken(token);
-                    String username = jwtTokenProvider.getUsernameFromToken(token);
-                    String role = jwtTokenProvider.getRoleFromToken(token);
+                if (token != null) {
+                    // Check if token is blacklisted (logout invalidation)
+                    if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                        log.warn("Attempt to use blacklisted token");
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
 
-                    // Create authority from role (Spring Security format: "ROLE_" prefix)
-                    SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
+                    // Validate token (expiration, signature, etc)
+                    if (jwtTokenProvider.validateToken(token)) {
+                        // Extract user information from token
+                        Long userId = jwtTokenProvider.getUserIdFromToken(token);
+                        String username = jwtTokenProvider.getUsernameFromToken(token);
+                        String role = jwtTokenProvider.getRoleFromToken(token);
 
-                    // Create authentication token
-                    UsernamePasswordAuthenticationToken authentication = 
-                        new UsernamePasswordAuthenticationToken(
-                            userId,                           // principal (user identifier)
-                            null,                             // credentials (null, already authenticated)
-                            Collections.singletonList(authority)  // authorities (roles)
-                        );
+                        // Create authority from role (Spring Security format: "ROLE_" prefix)
+                        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
 
-                    // Set authentication in security context
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                        // Create authentication token
+                        UsernamePasswordAuthenticationToken authentication = 
+                            new UsernamePasswordAuthenticationToken(
+                                userId,                           // principal (user identifier)
+                                null,                             // credentials (null, already authenticated)
+                                Collections.singletonList(authority)  // authorities (roles)
+                            );
+
+                        // Set authentication in security context
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        
+                        log.debug("JWT token validated for user: {}", username);
+                    } else {
+                        log.warn("JWT token validation failed for request from {}", request.getRemoteAddr());
+                    }
                 }
             }
         } catch (Exception ex) {
             // Log error but continue (let subsequent filters handle)
-            System.err.println("Could not set user authentication: " + ex.getMessage());
+            log.error("Error in JWT authentication filter: {}", ex.getMessage(), ex);
         }
 
         // Continue filter chain
         filterChain.doFilter(request, response);
     }
-
 }

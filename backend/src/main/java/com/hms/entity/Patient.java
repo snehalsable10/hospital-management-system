@@ -10,7 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "patients")
+@Table(name = "patients", indexes = {
+    @Index(name = "idx_patient_email", columnList = "email", unique = true),
+    @Index(name = "idx_patient_phone", columnList = "phone"),
+    @Index(name = "idx_patient_is_active", columnList = "is_active"),
+    @Index(name = "idx_patient_created_at", columnList = "created_at")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -94,5 +99,4 @@ public class Patient {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
 }

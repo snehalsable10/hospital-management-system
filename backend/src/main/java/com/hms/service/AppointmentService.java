@@ -2,13 +2,21 @@ package com.hms.service;
 
 import com.hms.dto.request.AppointmentRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.PageResponse;
 import com.hms.entity.Appointment;
 import com.hms.entity.Doctor;
 import com.hms.entity.Patient;
+import com.hms.exception.ResourceNotFoundException;
 import com.hms.repository.AppointmentRepository;
 import com.hms.repository.DoctorRepository;
 import com.hms.repository.PatientRepository;
+import com.hms.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -25,145 +33,189 @@ public class AppointmentService {
 
     /**
      * Get all appointments
+     * Cached for 5 minutes
      */
+    @Cacheable(value = "appointments", key = "'getAllAppointments'")
     public List<Appointment> getAllAppointments() {
         return appointmentRepository.findAll();
     }
 
     /**
      * Get appointment by ID
+     * Cached for 5 minutes with key = appointment ID
      */
+    @Cacheable(value = "appointment", key = "#id")
     public Optional<Appointment> getAppointmentById(Long id) {
         return appointmentRepository.findById(id);
     }
 
     /**
      * Get all appointments for a patient
+     * Cached for 5 minutes
      */
+    @Cacheable(value = "appointments", key = "'getAppointmentsByPatient:' + #patientId")
     public List<Appointment> getAppointmentsByPatient(Long patientId) {
         return appointmentRepository.findByPatientId(patientId);
     }
 
     /**
      * Get all appointments for a doctor
+     * Cached for 5 minutes
      */
+    @Cacheable(value = "appointments", key = "'getAppointmentsByDoctor:' + #doctorId")
     public List<Appointment> getAppointmentsByDoctor(Long doctorId) {
         return appointmentRepository.findByDoctorId(doctorId);
     }
 
     /**
      * Get appointments by status
+     * Cached for 5 minutes
      */
+    @Cacheable(value = "appointments", key = "'getAppointmentsByStatus:' + #status")
     public List<Appointment> getAppointmentsByStatus(String status) {
         return appointmentRepository.findByStatus(status);
     }
 
     /**
      * Get appointments in a date range
+     * Cached for 5 minutes
      */
+    @Cacheable(value = "appointments", key = "'getAppointmentsByDateRange:' + #startDate + ':' + #endDate")
     public List<Appointment> getAppointmentsByDateRange(LocalDate startDate, LocalDate endDate) {
         return appointmentRepository.findByAppointmentDateBetween(startDate, endDate);
     }
 
     /**
      * Create a new appointment
+     * Clears all appointment caches on create
+     *
+     * @throws IllegalArgumentException if the referenced patient or doctor does not exist
      */
+    @CacheEvict(value = {"appointments", "appointment"}, allEntries = true)
     public ApiResponse createAppointment(AppointmentRequest request) {
-        try {
-            // Validate patient exists
-            Optional<Patient> patientOptional = patientRepository.findById(request.getPatientId());
-            if (!patientOptional.isPresent()) {
-                return new ApiResponse("Patient not found", false);
-            }
+        Patient patient = patientRepository.findById(request.getPatientId())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Patient not found with id: " + request.getPatientId()));
 
-            // Validate doctor exists
-            Optional<Doctor> doctorOptional = doctorRepository.findById(request.getDoctorId());
-            if (!doctorOptional.isPresent()) {
-                return new ApiResponse("Doctor not found", false);
-            }
+        Doctor doctor = doctorRepository.findById(request.getDoctorId())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Doctor not found with id: " + request.getDoctorId()));
 
-            // Create new appointment
-            Appointment appointment = new Appointment();
-            appointment.setPatient(patientOptional.get());
-            appointment.setDoctor(doctorOptional.get());
-            appointment.setAppointmentDate(request.getAppointmentDate());
-            appointment.setAppointmentTime(request.getAppointmentTime());
-            appointment.setStatus(request.getStatus() != null ? request.getStatus() : "SCHEDULED");
-            appointment.setReason(request.getReason());
-            appointment.setNotes(request.getNotes());
-            appointment.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
+        Appointment appointment = new Appointment();
+        appointment.setPatient(patient);
+        appointment.setDoctor(doctor);
+        appointment.setAppointmentDate(request.getAppointmentDate());
+        appointment.setAppointmentTime(request.getAppointmentTime());
+        appointment.setStatus(request.getStatus() != null ? request.getStatus() : "SCHEDULED");
+        appointment.setReason(request.getReason());
+        appointment.setNotes(request.getNotes());
+        appointment.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
-            appointmentRepository.save(appointment);
+        appointmentRepository.save(appointment);
 
-            return new ApiResponse("Appointment created successfully", true);
-        } catch (Exception e) {
-            return new ApiResponse("Failed to create appointment: " + e.getMessage(), false);
-        }
+        return new ApiResponse("Appointment created successfully", true);
     }
 
     /**
      * Update an existing appointment
+     * Clears all appointment caches on update
+     *
+     * @throws ResourceNotFoundException if no appointment exists with the given id
+     * @throws IllegalArgumentException  if the referenced patient or doctor does not exist
      */
+    @CacheEvict(value = {"appointments", "appointment"}, allEntries = true)
     public ApiResponse updateAppointment(Long id, AppointmentRequest request) {
-        try {
-            Optional<Appointment> appointmentOptional = appointmentRepository.findById(id);
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
 
-            if (!appointmentOptional.isPresent()) {
-                return new ApiResponse("Appointment not found", false);
-            }
+        Patient patient = patientRepository.findById(request.getPatientId())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Patient not found with id: " + request.getPatientId()));
 
-            Appointment appointment = appointmentOptional.get();
+        Doctor doctor = doctorRepository.findById(request.getDoctorId())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Doctor not found with id: " + request.getDoctorId()));
 
-            // Validate patient exists
-            Optional<Patient> patientOptional = patientRepository.findById(request.getPatientId());
-            if (!patientOptional.isPresent()) {
-                return new ApiResponse("Patient not found", false);
-            }
-
-            // Validate doctor exists
-            Optional<Doctor> doctorOptional = doctorRepository.findById(request.getDoctorId());
-            if (!doctorOptional.isPresent()) {
-                return new ApiResponse("Doctor not found", false);
-            }
-
-            // Update fields
-            appointment.setPatient(patientOptional.get());
-            appointment.setDoctor(doctorOptional.get());
-            appointment.setAppointmentDate(request.getAppointmentDate());
-            appointment.setAppointmentTime(request.getAppointmentTime());
-            appointment.setStatus(request.getStatus() != null ? request.getStatus() : "SCHEDULED");
-            appointment.setReason(request.getReason());
-            appointment.setNotes(request.getNotes());
-            if (request.getIsActive() != null) {
-                appointment.setIsActive(request.getIsActive());
-            }
-
-            appointmentRepository.save(appointment);
-
-            return new ApiResponse("Appointment updated successfully", true);
-        } catch (Exception e) {
-            return new ApiResponse("Failed to update appointment: " + e.getMessage(), false);
+        appointment.setPatient(patient);
+        appointment.setDoctor(doctor);
+        appointment.setAppointmentDate(request.getAppointmentDate());
+        appointment.setAppointmentTime(request.getAppointmentTime());
+        appointment.setStatus(request.getStatus() != null ? request.getStatus() : "SCHEDULED");
+        appointment.setReason(request.getReason());
+        appointment.setNotes(request.getNotes());
+        if (request.getIsActive() != null) {
+            appointment.setIsActive(request.getIsActive());
         }
+
+        appointmentRepository.save(appointment);
+
+        return new ApiResponse("Appointment updated successfully", true);
     }
 
     /**
      * Delete an appointment (soft delete)
+     * Clears all appointment caches on delete
+     *
+     * @throws ResourceNotFoundException if no appointment exists with the given id
      */
+    @CacheEvict(value = {"appointments", "appointment"}, allEntries = true)
     public ApiResponse deleteAppointment(Long id) {
-        try {
-            Optional<Appointment> appointmentOptional = appointmentRepository.findById(id);
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
 
-            if (!appointmentOptional.isPresent()) {
-                return new ApiResponse("Appointment not found", false);
-            }
+        appointment.setIsActive(false);
+        appointmentRepository.save(appointment);
 
-            Appointment appointment = appointmentOptional.get();
-            appointment.setIsActive(false);
-            appointmentRepository.save(appointment);
+        return new ApiResponse("Appointment deleted successfully", true);
+    }
 
-            return new ApiResponse("Appointment deleted successfully", true);
-        } catch (Exception e) {
-            return new ApiResponse("Failed to delete appointment: " + e.getMessage(), false);
-        }
+    /**
+     * Get all appointments with pagination
+     */
+    public PageResponse<Appointment> getAllAppointmentsPaginated(int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Appointment> page = appointmentRepository.findAll(pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get appointments by patient with pagination
+     */
+    public PageResponse<Appointment> getAppointmentsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Appointment> page = appointmentRepository.findByPatientId(patientId, pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get appointments by doctor with pagination
+     */
+    public PageResponse<Appointment> getAppointmentsByDoctorPaginated(Long doctorId, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Appointment> page = appointmentRepository.findByDoctorId(doctorId, pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get appointments by status with pagination
+     */
+    public PageResponse<Appointment> getAppointmentsByStatusPaginated(String status, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Appointment> page = appointmentRepository.findByStatus(status, pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get appointments by date range with pagination
+     */
+    public PageResponse<Appointment> getAppointmentsByDateRangePaginated(LocalDate startDate, LocalDate endDate, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Appointment> page = appointmentRepository.findByAppointmentDateBetween(startDate, endDate, pageable);
+        return PaginationUtil.toPageResponse(page);
     }
 }

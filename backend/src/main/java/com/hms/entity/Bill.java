@@ -9,7 +9,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "bills")
+@Table(name = "bills", indexes = {
+    @Index(name = "idx_bill_patient_id", columnList = "patient_id"),
+    @Index(name = "idx_bill_doctor_id", columnList = "doctor_id"),
+    @Index(name = "idx_bill_status", columnList = "status"),
+    @Index(name = "idx_bill_date", columnList = "bill_date")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,7 +32,7 @@ public class Bill {
     @JoinColumn(name = "doctor_id", nullable = false)
     private Doctor doctor;
 
-    @Column(nullable = false)
+    @Column(name = "bill_date", nullable = false)
     private LocalDate billDate;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -76,5 +81,4 @@ public class Bill {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
 }

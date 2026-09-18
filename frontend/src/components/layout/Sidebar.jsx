@@ -12,6 +12,7 @@ import {
   DollarSign,
   Stethoscope,
   ChevronRight,
+  BedDouble,
 } from 'lucide-react';
 
 const Sidebar = ({ open }) => {
@@ -27,7 +28,7 @@ const Sidebar = ({ open }) => {
     { path: '/medical-history', icon: ClipboardList, label: 'Medical History' },
     { path: '/laboratory-tests', icon: FlaskConical, label: 'Lab Tests' },
     { path: '/bills', icon: DollarSign, label: 'Bills' },
-    { path: '/rooms', icon: Hospital, label: 'Rooms' },
+    { path: '/rooms', icon: BedDouble, label: 'Rooms' },
   ];
 
   const isActive = (path) => location.pathname === path;

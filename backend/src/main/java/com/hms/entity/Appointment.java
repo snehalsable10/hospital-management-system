@@ -11,7 +11,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "appointments")
+@Table(name = "appointments", indexes = {
+    @Index(name = "idx_appointment_patient_id", columnList = "patient_id"),
+    @Index(name = "idx_appointment_doctor_id", columnList = "doctor_id"),
+    @Index(name = "idx_appointment_status", columnList = "status"),
+    @Index(name = "idx_appointment_date", columnList = "appointment_date"),
+    @Index(name = "idx_appointment_created_at", columnList = "created_at")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,7 +35,7 @@ public class Appointment {
     @JoinColumn(name = "doctor_id", nullable = false)
     private Doctor doctor;
 
-    @Column(nullable = false)
+    @Column(name = "appointment_date", nullable = false)
     private LocalDate appointmentDate;
 
     @Column(nullable = false)
@@ -69,5 +75,4 @@ public class Appointment {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
 }

@@ -1,79 +1,143 @@
 package com.hms.service;
 
 import com.hms.dto.request.BillRequest;
+import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.PageResponse;
 import com.hms.entity.Bill;
 import com.hms.entity.Doctor;
 import com.hms.entity.Patient;
+import com.hms.exception.ResourceNotFoundException;
 import com.hms.repository.BillRepository;
 import com.hms.repository.DoctorRepository;
 import com.hms.repository.PatientRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.hms.util.PaginationUtil;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class BillService {
 
-    @Autowired
-    private BillRepository billRepository;
+    private final BillRepository billRepository;
+    private final PatientRepository patientRepository;
+    private final DoctorRepository doctorRepository;
 
-    @Autowired
-    private PatientRepository patientRepository;
-
-    @Autowired
-    private DoctorRepository doctorRepository;
-
+    /**
+     * Get all bills
+     * Cached for 10 minutes
+     */
+    @Cacheable(value = "bills", key = "'getAllBills'")
     public List<Bill> getAllBills() {
         return billRepository.findAll();
     }
 
+    /**
+     * Get bill by ID
+     * Cached for 10 minutes with key = bill ID
+     */
+    @Cacheable(value = "bill", key = "#id")
     public Optional<Bill> getBillById(Long id) {
         return billRepository.findById(id);
     }
 
+    /**
+     * Get all bills for a patient
+     * Cached for 10 minutes
+     *
+     * @throws ResourceNotFoundException if no patient exists with the given id
+     */
+    @Cacheable(value = "bills", key = "'getBillsByPatient:' + #patientId")
     public List<Bill> getBillsByPatient(Long patientId) {
         if (!patientRepository.existsById(patientId)) {
-            throw new RuntimeException("Patient not found");
+            throw new ResourceNotFoundException("Patient not found with id: " + patientId);
         }
         return billRepository.findByPatientId(patientId);
     }
 
+    /**
+     * Get all bills for a doctor
+     * Cached for 10 minutes
+     *
+     * @throws ResourceNotFoundException if no doctor exists with the given id
+     */
+    @Cacheable(value = "bills", key = "'getBillsByDoctor:' + #doctorId")
     public List<Bill> getBillsByDoctor(Long doctorId) {
         if (!doctorRepository.existsById(doctorId)) {
-            throw new RuntimeException("Doctor not found");
+            throw new ResourceNotFoundException("Doctor not found with id: " + doctorId);
         }
         return billRepository.findByDoctorId(doctorId);
     }
 
+    /**
+     * Get bills by status
+     * Cached for 10 minutes
+     */
+    @Cacheable(value = "bills", key = "'getBillsByStatus:' + #status")
     public List<Bill> getBillsByStatus(String status) {
         return billRepository.findByStatus(status);
     }
 
+    /**
+     * Get bills in a date range
+     * Cached for 10 minutes
+     */
+    @Cacheable(value = "bills", key = "'getBillsByDateRange:' + #startDate + ':' + #endDate")
     public List<Bill> getBillsByDateRange(LocalDate startDate, LocalDate endDate) {
         return billRepository.findByBillDateBetween(startDate, endDate);
     }
 
+    /**
+     * Get unpaid bills for a patient
+     * Cached for 10 minutes
+     *
+     * @throws ResourceNotFoundException if no patient exists with the given id
+     */
+    @Cacheable(value = "bills", key = "'getPatientUnpaidBills:' + #patientId")
     public List<Bill> getPatientUnpaidBills(Long patientId) {
         if (!patientRepository.existsById(patientId)) {
-            throw new RuntimeException("Patient not found");
+            throw new ResourceNotFoundException("Patient not found with id: " + patientId);
         }
         return billRepository.findByPatientIdAndStatus(patientId, "UNPAID");
     }
 
+    /**
+     * Get paid bills for a doctor
+     * Cached for 10 minutes
+     *
+     * @throws ResourceNotFoundException if no doctor exists with the given id
+     */
+    @Cacheable(value = "bills", key = "'getDoctorPaidBills:' + #doctorId")
     public List<Bill> getDoctorPaidBills(Long doctorId) {
         if (!doctorRepository.existsById(doctorId)) {
-            throw new RuntimeException("Doctor not found");
+            throw new ResourceNotFoundException("Doctor not found with id: " + doctorId);
         }
         return billRepository.findByDoctorIdAndStatus(doctorId, "PAID");
     }
 
-    public Bill createBill(BillRequest request) {
+    /**
+     * Create a new bill
+     * Clears all bill caches on create
+     *
+     * @throws IllegalArgumentException if the referenced patient or doctor does not exist
+     */
+    @CacheEvict(value = {"bills", "bill"}, allEntries = true)
+    public ApiResponse createBill(BillRequest request) {
         Patient patient = patientRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Patient not found with id: " + request.getPatientId()));
+
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
-                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Doctor not found with id: " + request.getDoctorId()));
 
         Bill bill = new Bill();
         bill.setPatient(patient);
@@ -87,18 +151,32 @@ public class BillService {
         bill.setStatus(request.getStatus());
         bill.setPaymentMethod(request.getPaymentMethod());
         bill.setDescription(request.getDescription());
+        bill.setIsActive(true);
 
-        return billRepository.save(bill);
+        billRepository.save(bill);
+
+        return new ApiResponse("Bill created successfully", true);
     }
 
-    public Bill updateBill(Long id, BillRequest request) {
+    /**
+     * Update an existing bill
+     * Clears all bill caches on update
+     *
+     * @throws ResourceNotFoundException if no bill exists with the given id
+     * @throws IllegalArgumentException  if the referenced patient or doctor does not exist
+     */
+    @CacheEvict(value = {"bills", "bill"}, allEntries = true)
+    public ApiResponse updateBill(Long id, BillRequest request) {
         Bill bill = billRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Bill not found with id: " + id));
 
         Patient patient = patientRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Patient not found with id: " + request.getPatientId()));
+
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
-                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Doctor not found with id: " + request.getDoctorId()));
 
         bill.setPatient(patient);
         bill.setDoctor(doctor);
@@ -112,14 +190,85 @@ public class BillService {
         bill.setPaymentMethod(request.getPaymentMethod());
         bill.setDescription(request.getDescription());
 
-        return billRepository.save(bill);
+        billRepository.save(bill);
+
+        return new ApiResponse("Bill updated successfully", true);
     }
 
-    public void deleteBill(Long id) {
+    /**
+     * Delete a bill (soft delete)
+     * Clears all bill caches on delete
+     *
+     * @throws ResourceNotFoundException if no bill exists with the given id
+     */
+    @CacheEvict(value = {"bills", "bill"}, allEntries = true)
+    public ApiResponse deleteBill(Long id) {
         Bill bill = billRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Bill not found with id: " + id));
+
         bill.setIsActive(false);
         billRepository.save(bill);
+
+        return new ApiResponse("Bill deleted successfully", true);
     }
 
+    /**
+     * Get all bills with pagination
+     */
+    public PageResponse<Bill> getAllBillsPaginated(int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Bill> page = billRepository.findAll(pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get bills by patient with pagination
+     */
+    public PageResponse<Bill> getBillsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Bill> page = billRepository.findByPatientId(patientId, pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get bills by doctor with pagination
+     */
+    public PageResponse<Bill> getBillsByDoctorPaginated(Long doctorId, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Bill> page = billRepository.findByDoctorId(doctorId, pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get bills by status with pagination
+     */
+    public PageResponse<Bill> getBillsByStatusPaginated(String status, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Bill> page = billRepository.findByStatus(status, pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get bills by date range with pagination
+     */
+    public PageResponse<Bill> getBillsByDateRangePaginated(LocalDate startDate, LocalDate endDate, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Bill> page = billRepository.findByBillDateBetween(startDate, endDate, pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Get unpaid bills for a patient with pagination
+     */
+    public PageResponse<Bill> getPatientUnpaidBillsPaginated(Long patientId, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Bill> page = billRepository.findByPatientIdAndStatus(patientId, "UNPAID", pageable);
+        return PaginationUtil.toPageResponse(page);
+    }
 }
