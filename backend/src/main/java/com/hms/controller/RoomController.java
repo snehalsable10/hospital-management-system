@@ -43,13 +43,8 @@ public class RoomController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<ApiResponse> getAllRooms() {
-        try {
-            List<Room> rooms = roomService.getAllRooms();
-            return ResponseEntity.ok(new ApiResponse("Rooms retrieved successfully", rooms, true));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving rooms: " + e.getMessage(), false));
-        }
+        List<Room> rooms = roomService.getAllRooms();
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved successfully", rooms, true));
     }
 
     /**
@@ -59,17 +54,12 @@ public class RoomController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getRoomById(@PathVariable Long id) {
-        try {
-            Optional<Room> room = roomService.getRoomById(id);
-            if (room.isPresent()) {
-                return ResponseEntity.ok(new ApiResponse("Room retrieved successfully", room.get(), true));
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ApiResponse("Room not found", false));
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving room: " + e.getMessage(), false));
+        Optional<Room> room = roomService.getRoomById(id);
+        if (room.isPresent()) {
+            return ResponseEntity.ok(new ApiResponse("Room retrieved successfully", room.get(), true));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse("Room not found", false));
         }
     }
 
@@ -80,13 +70,8 @@ public class RoomController {
     @GetMapping("/type/{roomType}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getRoomsByType(@PathVariable String roomType) {
-        try {
-            List<Room> rooms = roomService.getRoomsByType(roomType);
-            return ResponseEntity.ok(new ApiResponse("Rooms retrieved by type successfully", rooms, true));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving rooms: " + e.getMessage(), false));
-        }
+        List<Room> rooms = roomService.getRoomsByType(roomType);
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by type successfully", rooms, true));
     }
 
     /**
@@ -96,13 +81,8 @@ public class RoomController {
     @GetMapping("/ward/{ward}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getRoomsByWard(@PathVariable String ward) {
-        try {
-            List<Room> rooms = roomService.getRoomsByWard(ward);
-            return ResponseEntity.ok(new ApiResponse("Rooms retrieved by ward successfully", rooms, true));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving rooms: " + e.getMessage(), false));
-        }
+        List<Room> rooms = roomService.getRoomsByWard(ward);
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by ward successfully", rooms, true));
     }
 
     /**
@@ -112,13 +92,8 @@ public class RoomController {
     @GetMapping("/status/{status}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getRoomsByStatus(@PathVariable String status) {
-        try {
-            List<Room> rooms = roomService.getRoomsByStatus(status);
-            return ResponseEntity.ok(new ApiResponse("Rooms retrieved by status successfully", rooms, true));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving rooms: " + e.getMessage(), false));
-        }
+        List<Room> rooms = roomService.getRoomsByStatus(status);
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by status successfully", rooms, true));
     }
 
     /**
@@ -128,13 +103,8 @@ public class RoomController {
     @GetMapping("/available")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getAvailableRooms() {
-        try {
-            List<Room> rooms = roomService.getAvailableRooms();
-            return ResponseEntity.ok(new ApiResponse("Available rooms retrieved successfully", rooms, true));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving available rooms: " + e.getMessage(), false));
-        }
+        List<Room> rooms = roomService.getAvailableRooms();
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved successfully", rooms, true));
     }
 
     /**
@@ -144,13 +114,8 @@ public class RoomController {
     @GetMapping("/available/type/{roomType}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getAvailableRoomsByType(@PathVariable String roomType) {
-        try {
-            List<Room> rooms = roomService.getAvailableRoomsByType(roomType);
-            return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by type successfully", rooms, true));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving available rooms: " + e.getMessage(), false));
-        }
+        List<Room> rooms = roomService.getAvailableRoomsByType(roomType);
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by type successfully", rooms, true));
     }
 
     /**
@@ -160,13 +125,8 @@ public class RoomController {
     @GetMapping("/available/ward/{ward}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getAvailableRoomsByWard(@PathVariable String ward) {
-        try {
-            List<Room> rooms = roomService.getAvailableRoomsByWard(ward);
-            return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by ward successfully", rooms, true));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving available rooms: " + e.getMessage(), false));
-        }
+        List<Room> rooms = roomService.getAvailableRoomsByWard(ward);
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by ward successfully", rooms, true));
     }
 
     /**
@@ -184,11 +144,6 @@ public class RoomController {
     })
     public ResponseEntity<ApiResponse> createRoom(@Valid @RequestBody RoomRequest request) {
         ApiResponse response = roomService.createRoom(request);
-        
-        if (!response.getSuccess()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-        
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -207,11 +162,6 @@ public class RoomController {
     })
     public ResponseEntity<ApiResponse> updateRoom(@PathVariable Long id, @Valid @RequestBody RoomRequest request) {
         ApiResponse response = roomService.updateRoom(id, request);
-        
-        if (!response.getSuccess()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-        
         return ResponseEntity.ok(response);
     }
 
@@ -229,11 +179,6 @@ public class RoomController {
     })
     public ResponseEntity<ApiResponse> deleteRoom(@PathVariable Long id) {
         ApiResponse response = roomService.deleteRoom(id);
-        
-        if (!response.getSuccess()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-        }
-        
         return ResponseEntity.ok(response);
     }
 
@@ -252,11 +197,6 @@ public class RoomController {
     })
     public ResponseEntity<ApiResponse> occupyBed(@PathVariable Long id) {
         ApiResponse response = roomService.occupyBed(id);
-        
-        if (!response.getSuccess()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-        
         return ResponseEntity.ok(response);
     }
 
@@ -275,11 +215,6 @@ public class RoomController {
     })
     public ResponseEntity<ApiResponse> vacateBed(@PathVariable Long id) {
         ApiResponse response = roomService.vacateBed(id);
-
-        if (!response.getSuccess()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-
         return ResponseEntity.ok(response);
     }
 
@@ -300,13 +235,8 @@ public class RoomController {
             @RequestParam(defaultValue = "0") int pageNumber,
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
-        try {
-            PageResponse<Room> response = roomService.getAllRoomsPaginated(pageNumber, pageSize);
-            return ResponseEntity.ok(new ApiResponse("Rooms retrieved successfully", response, true));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse("Invalid pagination parameters: " + e.getMessage(), false));
-        }
+        PageResponse<Room> response = roomService.getAllRoomsPaginated(pageNumber, pageSize);
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved successfully", response, true));
     }
 
     /**
@@ -328,13 +258,8 @@ public class RoomController {
             @RequestParam(defaultValue = "0") int pageNumber,
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
-        try {
-            PageResponse<Room> response = roomService.getRoomsByTypePaginated(roomType, pageNumber, pageSize);
-            return ResponseEntity.ok(new ApiResponse("Rooms retrieved by type successfully", response, true));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse("Invalid pagination parameters: " + e.getMessage(), false));
-        }
+        PageResponse<Room> response = roomService.getRoomsByTypePaginated(roomType, pageNumber, pageSize);
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by type successfully", response, true));
     }
 
     /**
@@ -356,13 +281,8 @@ public class RoomController {
             @RequestParam(defaultValue = "0") int pageNumber,
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
-        try {
-            PageResponse<Room> response = roomService.getRoomsByWardPaginated(ward, pageNumber, pageSize);
-            return ResponseEntity.ok(new ApiResponse("Rooms retrieved by ward successfully", response, true));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse("Invalid pagination parameters: " + e.getMessage(), false));
-        }
+        PageResponse<Room> response = roomService.getRoomsByWardPaginated(ward, pageNumber, pageSize);
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by ward successfully", response, true));
     }
 
     /**
@@ -384,13 +304,8 @@ public class RoomController {
             @RequestParam(defaultValue = "0") int pageNumber,
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
-        try {
-            PageResponse<Room> response = roomService.getRoomsByStatusPaginated(status, pageNumber, pageSize);
-            return ResponseEntity.ok(new ApiResponse("Rooms retrieved by status successfully", response, true));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse("Invalid pagination parameters: " + e.getMessage(), false));
-        }
+        PageResponse<Room> response = roomService.getRoomsByStatusPaginated(status, pageNumber, pageSize);
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by status successfully", response, true));
     }
 
     /**
@@ -410,13 +325,8 @@ public class RoomController {
             @RequestParam(defaultValue = "0") int pageNumber,
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
-        try {
-            PageResponse<Room> response = roomService.getAvailableRoomsPaginated(pageNumber, pageSize);
-            return ResponseEntity.ok(new ApiResponse("Available rooms retrieved successfully", response, true));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse("Invalid pagination parameters: " + e.getMessage(), false));
-        }
+        PageResponse<Room> response = roomService.getAvailableRoomsPaginated(pageNumber, pageSize);
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved successfully", response, true));
     }
 
     /**
@@ -438,13 +348,8 @@ public class RoomController {
             @RequestParam(defaultValue = "0") int pageNumber,
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
-        try {
-            PageResponse<Room> response = roomService.getAvailableRoomsByTypePaginated(roomType, pageNumber, pageSize);
-            return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by type successfully", response, true));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse("Invalid pagination parameters: " + e.getMessage(), false));
-        }
+        PageResponse<Room> response = roomService.getAvailableRoomsByTypePaginated(roomType, pageNumber, pageSize);
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by type successfully", response, true));
     }
 
     /**
@@ -466,12 +371,7 @@ public class RoomController {
             @RequestParam(defaultValue = "0") int pageNumber,
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
-        try {
-            PageResponse<Room> response = roomService.getAvailableRoomsByWardPaginated(ward, pageNumber, pageSize);
-            return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by ward successfully", response, true));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse("Invalid pagination parameters: " + e.getMessage(), false));
-        }
+        PageResponse<Room> response = roomService.getAvailableRoomsByWardPaginated(ward, pageNumber, pageSize);
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by ward successfully", response, true));
     }
 }

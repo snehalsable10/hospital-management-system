@@ -100,6 +100,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle operations that are invalid for the resource's current state
+     * (409 Conflict) - e.g. occupying a bed in a room that is already full.
+     * The request is well formed and the resource exists; the state forbids it.
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse> handleIllegalState(
+            IllegalStateException ex,
+            WebRequest request) {
+
+        log.warn("Invalid state transition on request {}: {}", request.getDescription(false), ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiResponse(ex.getMessage(), false));
+    }
+
+    /**
      * Handle database constraint violations (409 Conflict).
      * Catches races where a unique value is inserted between a service's
      * existsBy... check and the actual save.

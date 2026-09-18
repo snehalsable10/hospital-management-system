@@ -1,8 +1,14 @@
 package com.hms.config;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -14,24 +20,51 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
 @Configuration
 @EnableCaching
+@RequiredArgsConstructor
 @Slf4j
 public class RedisConfig implements CachingConfigurer {
 
     /**
-     * Redis connection factory using Lettuce
+     * Supplied by Spring Boot from spring.data.redis.* (host, port, password,
+     * SSL). Previously this class built its own factory with no arguments,
+     * which hard-coded localhost and silently ignored every deployment setting.
      */
-    @Bean
-    public LettuceConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory();
+    private final RedisConnectionFactory redisConnectionFactory;
+
+    /**
+     * Cached values are stored as JSON, not Java serialization.
+     *
+     * The default value serializer is JdkSerializationRedisSerializer, and no
+     * entity in this codebase implements Serializable - so every cache write
+     * failed. Type information is embedded so values deserialize back to the
+     * right class, restricted to this application's own types.
+     */
+    private RedisSerializationContext.SerializationPair<Object> jsonValues() {
+        ObjectMapper mapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .registerModule(new Jdk8Module())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .activateDefaultTyping(
+                        BasicPolymorphicTypeValidator.builder()
+                                .allowIfSubType("com.hms.")
+                                .allowIfSubType("java.util.")
+                                .allowIfSubType("java.time.")
+                                .build(),
+                        ObjectMapper.DefaultTyping.NON_FINAL,
+                        JsonTypeInfo.As.PROPERTY);
+
+        return RedisSerializationContext.SerializationPair
+                .fromSerializer(new GenericJackson2JsonRedisSerializer(mapper));
     }
 
     /**
@@ -41,26 +74,33 @@ public class RedisConfig implements CachingConfigurer {
     @Bean
     @Override
     public CacheManager cacheManager() {
+        RedisSerializationContext.SerializationPair<Object> values = jsonValues();
+
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeValuesWith(values)
                 .entryTtl(Duration.ofMinutes(10));  // Default TTL: 10 minutes
 
         // Patient cache: 15 minutes
         RedisCacheConfiguration patientConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeValuesWith(values)
                 .entryTtl(Duration.ofMinutes(15));
 
         // Doctor cache: 20 minutes
         RedisCacheConfiguration doctorConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeValuesWith(values)
                 .entryTtl(Duration.ofMinutes(20));
 
         // Department cache: 30 minutes (rarely changes)
         RedisCacheConfiguration departmentConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeValuesWith(values)
                 .entryTtl(Duration.ofMinutes(30));
 
         // Appointment cache: 5 minutes (frequently changes)
         RedisCacheConfiguration appointmentConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeValuesWith(values)
                 .entryTtl(Duration.ofMinutes(5));
 
-        return RedisCacheManager.builder(redisConnectionFactory())
+        return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(config)
                 .withCacheConfiguration("patients", patientConfig)
                 .withCacheConfiguration("patient", patientConfig)

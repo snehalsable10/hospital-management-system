@@ -4,6 +4,8 @@ import com.hms.dto.request.RoomRequest;
 import com.hms.dto.response.ApiResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Room;
+import com.hms.exception.DuplicateResourceException;
+import com.hms.exception.ResourceNotFoundException;
 import com.hms.repository.RoomRepository;
 import com.hms.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,7 @@ public class RoomService {
      */
     @Cacheable(value = "rooms", key = "'getAllRooms'")
     public List<Room> getAllRooms() {
-        return roomRepository.findAll();
+        return roomRepository.findByIsActiveTrue();
     }
 
     /**
@@ -101,29 +103,25 @@ public class RoomService {
      */
     @CacheEvict(value = {"rooms", "room"}, allEntries = true)
     public ApiResponse createRoom(RoomRequest request) {
-        try {
-            if (roomRepository.existsByRoomNumber(request.getRoomNumber())) {
-                return new ApiResponse("Room number already exists", false);
-            }
-
-            Room room = new Room();
-            room.setRoomNumber(request.getRoomNumber());
-            room.setRoomType(request.getRoomType());
-            room.setWard(request.getWard());
-            room.setCapacity(request.getCapacity());
-            room.setCostPerDay(request.getCostPerDay());
-            room.setStatus(request.getStatus());
-            room.setDescription(request.getDescription());
-            room.setAmenities(request.getAmenities());
-            room.setOccupiedBeds(0);
-            room.setIsActive(true);
-
-            roomRepository.save(room);
-
-            return new ApiResponse("Room created successfully", true);
-        } catch (Exception e) {
-            return new ApiResponse("Failed to create room: " + e.getMessage(), false);
+        if (roomRepository.existsByRoomNumber(request.getRoomNumber())) {
+            throw new DuplicateResourceException("Room number already exists: " + request.getRoomNumber());
         }
+
+        Room room = new Room();
+        room.setRoomNumber(request.getRoomNumber());
+        room.setRoomType(request.getRoomType());
+        room.setWard(request.getWard());
+        room.setCapacity(request.getCapacity());
+        room.setCostPerDay(request.getCostPerDay());
+        room.setStatus(request.getStatus());
+        room.setDescription(request.getDescription());
+        room.setAmenities(request.getAmenities());
+        room.setOccupiedBeds(0);
+        room.setIsActive(true);
+
+        roomRepository.save(room);
+
+        return new ApiResponse("Room created successfully", true);
     }
 
     /**
@@ -132,30 +130,26 @@ public class RoomService {
      */
     @CacheEvict(value = {"rooms", "room"}, allEntries = true)
     public ApiResponse updateRoom(Long id, RoomRequest request) {
-        try {
-            Room room = roomRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Room not found"));
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found with id: " + id));
 
-            if (!room.getRoomNumber().equals(request.getRoomNumber()) &&
-                roomRepository.existsByRoomNumber(request.getRoomNumber())) {
-                return new ApiResponse("Room number already exists", false);
-            }
-
-            room.setRoomNumber(request.getRoomNumber());
-            room.setRoomType(request.getRoomType());
-            room.setWard(request.getWard());
-            room.setCapacity(request.getCapacity());
-            room.setCostPerDay(request.getCostPerDay());
-            room.setStatus(request.getStatus());
-            room.setDescription(request.getDescription());
-            room.setAmenities(request.getAmenities());
-
-            roomRepository.save(room);
-
-            return new ApiResponse("Room updated successfully", true);
-        } catch (Exception e) {
-            return new ApiResponse("Failed to update room: " + e.getMessage(), false);
+        if (!room.getRoomNumber().equals(request.getRoomNumber()) &&
+            roomRepository.existsByRoomNumber(request.getRoomNumber())) {
+            throw new DuplicateResourceException("Room number already exists: " + request.getRoomNumber());
         }
+
+        room.setRoomNumber(request.getRoomNumber());
+        room.setRoomType(request.getRoomType());
+        room.setWard(request.getWard());
+        room.setCapacity(request.getCapacity());
+        room.setCostPerDay(request.getCostPerDay());
+        room.setStatus(request.getStatus());
+        room.setDescription(request.getDescription());
+        room.setAmenities(request.getAmenities());
+
+        roomRepository.save(room);
+
+        return new ApiResponse("Room updated successfully", true);
     }
 
     /**
@@ -164,16 +158,13 @@ public class RoomService {
      */
     @CacheEvict(value = {"rooms", "room"}, allEntries = true)
     public ApiResponse deleteRoom(Long id) {
-        try {
-            Room room = roomRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Room not found"));
-            room.setIsActive(false);
-            roomRepository.save(room);
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found with id: " + id));
 
-            return new ApiResponse("Room deleted successfully", true);
-        } catch (Exception e) {
-            return new ApiResponse("Failed to delete room: " + e.getMessage(), false);
-        }
+        room.setIsActive(false);
+        roomRepository.save(room);
+
+        return new ApiResponse("Room deleted successfully", true);
     }
 
     /**
@@ -182,27 +173,21 @@ public class RoomService {
      */
     @CacheEvict(value = {"rooms", "room"}, allEntries = true)
     public ApiResponse occupyBed(Long roomId) {
-        try {
-            Room room = roomRepository.findById(roomId)
-                    .orElseThrow(() -> new RuntimeException("Room not found"));
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found with id: " + roomId));
 
-            if (room.getOccupiedBeds() < room.getCapacity()) {
-                room.setOccupiedBeds(room.getOccupiedBeds() + 1);
-
-                if (room.getOccupiedBeds() >= room.getCapacity()) {
-                    room.setStatus("FULL");
-                } else {
-                    room.setStatus("AVAILABLE");
-                }
-
-                roomRepository.save(room);
-                return new ApiResponse("Bed occupied successfully", true);
-            } else {
-                return new ApiResponse("Room is already full", false);
-            }
-        } catch (Exception e) {
-            return new ApiResponse("Failed to occupy bed: " + e.getMessage(), false);
+        if (room.getOccupiedBeds() >= room.getCapacity()) {
+            throw new IllegalStateException(
+                    "Room " + room.getRoomNumber() + " is already full ("
+                            + room.getOccupiedBeds() + "/" + room.getCapacity() + " beds)");
         }
+
+        room.setOccupiedBeds(room.getOccupiedBeds() + 1);
+        room.setStatus(room.getOccupiedBeds() >= room.getCapacity() ? "FULL" : "AVAILABLE");
+
+        roomRepository.save(room);
+
+        return new ApiResponse("Bed occupied successfully", true);
     }
 
     /**
@@ -211,21 +196,20 @@ public class RoomService {
      */
     @CacheEvict(value = {"rooms", "room"}, allEntries = true)
     public ApiResponse vacateBed(Long roomId) {
-        try {
-            Room room = roomRepository.findById(roomId)
-                    .orElseThrow(() -> new RuntimeException("Room not found"));
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found with id: " + roomId));
 
-            if (room.getOccupiedBeds() > 0) {
-                room.setOccupiedBeds(room.getOccupiedBeds() - 1);
-                room.setStatus("AVAILABLE");
-                roomRepository.save(room);
-                return new ApiResponse("Bed vacated successfully", true);
-            } else {
-                return new ApiResponse("No occupied beds to vacate", false);
-            }
-        } catch (Exception e) {
-            return new ApiResponse("Failed to vacate bed: " + e.getMessage(), false);
+        if (room.getOccupiedBeds() <= 0) {
+            throw new IllegalStateException(
+                    "Room " + room.getRoomNumber() + " has no occupied beds to vacate");
         }
+
+        room.setOccupiedBeds(room.getOccupiedBeds() - 1);
+        room.setStatus("AVAILABLE");
+
+        roomRepository.save(room);
+
+        return new ApiResponse("Bed vacated successfully", true);
     }
 
     /**
@@ -234,7 +218,7 @@ public class RoomService {
     public PageResponse<Room> getAllRoomsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Room> page = roomRepository.findAll(pageable);
+        Page<Room> page = roomRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
 

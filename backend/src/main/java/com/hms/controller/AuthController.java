@@ -1,6 +1,7 @@
 package com.hms.controller;
 
 import com.hms.audit.AuditService;
+import com.hms.dto.request.CreateUserRequest;
 import com.hms.dto.request.LoginRequest;
 import com.hms.dto.request.SignupRequest;
 import com.hms.dto.response.ApiResponse;
@@ -42,6 +43,21 @@ public class AuthController {
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
+    }
+
+    /**
+     * POST /api/auth/users - Create a user with a specific role
+     * ADMIN only. Public signup cannot choose a role, so this is the only way
+     * to create doctor, staff or administrator logins.
+     */
+    @PostMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> createUser(@Valid @RequestBody CreateUserRequest createUserRequest,
+                                                  HttpServletRequest request) {
+        ApiResponse response = userService.createUser(createUserRequest);
+        auditService.userRegistered(createUserRequest.getEmail(),
+                createUserRequest.getRole(), clientIp(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**

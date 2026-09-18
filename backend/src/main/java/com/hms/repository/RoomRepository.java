@@ -25,4 +25,8 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
     Page<Room> findByStatus(String status, Pageable pageable);
     Page<Room> findByRoomTypeAndStatus(String roomType, String status, Pageable pageable);
     Page<Room> findByWardAndStatus(String ward, String status, Pageable pageable);
+
+    // Soft delete: lists must not show records flagged inactive
+    List<Room> findByIsActiveTrue();
+    Page<Room> findByIsActiveTrue(Pageable pageable);
 }

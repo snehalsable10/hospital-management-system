@@ -37,7 +37,7 @@ public class BillService {
      */
     @Cacheable(value = "bills", key = "'getAllBills'")
     public List<Bill> getAllBills() {
-        return billRepository.findAll();
+        return billRepository.findByIsActiveTrue();
     }
 
     /**
@@ -218,7 +218,7 @@ public class BillService {
     public PageResponse<Bill> getAllBillsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Bill> page = billRepository.findAll(pageable);
+        Page<Bill> page = billRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
 

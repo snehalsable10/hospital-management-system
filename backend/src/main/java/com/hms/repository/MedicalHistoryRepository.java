@@ -19,4 +19,8 @@ public interface MedicalHistoryRepository extends JpaRepository<MedicalHistory, 
     Page<MedicalHistory> findByPatientId(Long patientId, Pageable pageable);
     Page<MedicalHistory> findByStatus(String status, Pageable pageable);
     Page<MedicalHistory> findByConditionNameIgnoreCaseContaining(String conditionName, Pageable pageable);
+
+    // Soft delete: lists must not show records flagged inactive
+    List<MedicalHistory> findByIsActiveTrue();
+    Page<MedicalHistory> findByIsActiveTrue(Pageable pageable);
 }

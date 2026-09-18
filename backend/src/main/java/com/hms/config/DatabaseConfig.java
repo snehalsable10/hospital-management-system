@@ -3,6 +3,7 @@ package com.hms.config;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,13 @@ import java.util.Map;
 @EnableJpaAuditing
 @RequiredArgsConstructor
 public class DatabaseConfig {
+
+    /**
+     * Defaults to validate: an unconfigured environment should refuse to start
+     * against a mismatched schema rather than quietly rewriting it.
+     */
+    @Value("${spring.jpa.hibernate.ddl-auto:validate}")
+    private String ddlAuto;
 
     /**
      * Configure HikariCP connection pooling
@@ -71,8 +79,10 @@ public class DatabaseConfig {
         // Hibernate dialect
         properties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         
-        // DDL (Data Definition Language)
-        properties.put("hibernate.hbm2ddl.auto", "update");
+        // Schema handling comes from the active profile, not from this class.
+        // Hard-coding "update" here silently overrode application-prod.properties'
+        // ddl-auto=validate, letting production auto-alter its own schema.
+        properties.put("hibernate.hbm2ddl.auto", ddlAuto);
         
         // Query optimization
         properties.put("hibernate.use_sql_comments", true);

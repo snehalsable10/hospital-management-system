@@ -34,7 +34,7 @@ public class LaboratoryTestService {
      */
     @Cacheable(value = "laboratoryTests", key = "'getAllLaboratoryTests'")
     public List<LaboratoryTest> getAllLaboratoryTests() {
-        return laboratoryTestRepository.findAll();
+        return laboratoryTestRepository.findByIsActiveTrue();
     }
 
     /**
@@ -168,7 +168,7 @@ public class LaboratoryTestService {
     public PageResponse<LaboratoryTest> getAllLaboratoryTestsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<LaboratoryTest> page = laboratoryTestRepository.findAll(pageable);
+        Page<LaboratoryTest> page = laboratoryTestRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
 

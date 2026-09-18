@@ -25,4 +25,8 @@ public interface BillRepository extends JpaRepository<Bill, Long> {
     Page<Bill> findByStatus(String status, Pageable pageable);
     Page<Bill> findByBillDateBetween(LocalDate startDate, LocalDate endDate, Pageable pageable);
     Page<Bill> findByPatientIdAndStatus(Long patientId, String status, Pageable pageable);
+
+    // Soft delete: lists must not show records flagged inactive
+    List<Bill> findByIsActiveTrue();
+    Page<Bill> findByIsActiveTrue(Pageable pageable);
 }

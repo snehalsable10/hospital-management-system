@@ -33,7 +33,7 @@ public class MedicalHistoryService {
      */
     @Cacheable(value = "medicalHistories", key = "'getAllMedicalHistories'")
     public List<MedicalHistory> getAllMedicalHistories() {
-        return medicalHistoryRepository.findAll();
+        return medicalHistoryRepository.findByIsActiveTrue();
     }
 
     /**
@@ -154,7 +154,7 @@ public class MedicalHistoryService {
     public PageResponse<MedicalHistory> getAllMedicalHistoriesPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<MedicalHistory> page = medicalHistoryRepository.findAll(pageable);
+        Page<MedicalHistory> page = medicalHistoryRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
 

@@ -24,4 +24,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     Page<Appointment> findByDoctorId(Long doctorId, Pageable pageable);
     Page<Appointment> findByStatus(String status, Pageable pageable);
     Page<Appointment> findByAppointmentDateBetween(LocalDate startDate, LocalDate endDate, Pageable pageable);
+
+    // Soft delete: lists must not show records flagged inactive
+    List<Appointment> findByIsActiveTrue();
+    Page<Appointment> findByIsActiveTrue(Pageable pageable);
 }

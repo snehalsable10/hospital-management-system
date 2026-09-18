@@ -37,7 +37,7 @@ public class AppointmentService {
      */
     @Cacheable(value = "appointments", key = "'getAllAppointments'")
     public List<Appointment> getAllAppointments() {
-        return appointmentRepository.findAll();
+        return appointmentRepository.findByIsActiveTrue();
     }
 
     /**
@@ -175,7 +175,7 @@ public class AppointmentService {
     public PageResponse<Appointment> getAllAppointmentsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Appointment> page = appointmentRepository.findAll(pageable);
+        Page<Appointment> page = appointmentRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
 

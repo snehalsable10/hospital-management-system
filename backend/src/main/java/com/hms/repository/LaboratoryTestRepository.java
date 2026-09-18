@@ -23,4 +23,8 @@ public interface LaboratoryTestRepository extends JpaRepository<LaboratoryTest, 
     Page<LaboratoryTest> findByTestNameIgnoreCaseContaining(String testName, Pageable pageable);
     Page<LaboratoryTest> findByStatus(String status, Pageable pageable);
     Page<LaboratoryTest> findByTestDateBetween(LocalDate startDate, LocalDate endDate, Pageable pageable);
+
+    // Soft delete: lists must not show records flagged inactive
+    List<LaboratoryTest> findByIsActiveTrue();
+    Page<LaboratoryTest> findByIsActiveTrue(Pageable pageable);
 }

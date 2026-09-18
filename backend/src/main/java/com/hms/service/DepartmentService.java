@@ -31,7 +31,7 @@ public class DepartmentService {
      */
     @Cacheable(value = "departments", key = "'getAllDepartments'")
     public List<Department> getAllDepartments() {
-        return departmentRepository.findAll();
+        return departmentRepository.findByIsActiveTrue();
     }
 
     /**
@@ -118,7 +118,7 @@ public class DepartmentService {
     public PageResponse<Department> getAllDepartmentsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Department> page = departmentRepository.findAll(pageable);
+        Page<Department> page = departmentRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
 }

@@ -1,16 +1,19 @@
 package com.hms.service;
 
+import com.hms.dto.request.CreateUserRequest;
 import com.hms.dto.request.LoginRequest;
 import com.hms.dto.request.SignupRequest;
 import com.hms.dto.response.ApiResponse;
 import com.hms.dto.response.AuthResponse;
 import com.hms.entity.User;
+import com.hms.exception.DuplicateResourceException;
 import com.hms.repository.UserRepository;
 import com.hms.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,12 @@ public class UserService {
      * accepting a client-supplied role let anyone register as an administrator.
      */
     public static final String DEFAULT_SIGNUP_ROLE = "PATIENT";
+
+    /**
+     * The only roles the system recognises. Anything outside this set would
+     * create a user no @PreAuthorize rule can ever match.
+     */
+    public static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "DOCTOR", "STAFF", "PATIENT");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -63,6 +72,43 @@ public class UserService {
         } catch (Exception e) {
             return new ApiResponse("Registration failed: " + e.getMessage(), false);
         }
+    }
+
+    /**
+     * Create a user with an explicit role. Only reachable by an administrator:
+     * public signup deliberately cannot choose a role.
+     *
+     * @throws DuplicateResourceException if the email or username is taken
+     * @throws IllegalArgumentException   if the role is not one the system recognises
+     */
+    public ApiResponse createUser(CreateUserRequest request) {
+        String role = request.getRole() == null ? "" : request.getRole().trim().toUpperCase();
+        if (!ALLOWED_ROLES.contains(role)) {
+            throw new IllegalArgumentException(
+                    "Unknown role: " + request.getRole() + ". Allowed roles are " + ALLOWED_ROLES);
+        }
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateResourceException("Email already registered: " + request.getEmail());
+        }
+
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new DuplicateResourceException("Username already taken: " + request.getUsername());
+        }
+
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setPhone(request.getPhone());
+        user.setRole(role);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setIsActive(true);
+
+        User saved = userRepository.save(user);
+
+        return new ApiResponse("User created successfully", saved.getId(), true);
     }
 
     /**

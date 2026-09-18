@@ -25,4 +25,8 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     Page<Patient> findByFirstNameIgnoreCaseContaining(String firstName, Pageable pageable);
     Page<Patient> findByLastNameIgnoreCaseContaining(String lastName, Pageable pageable);
     Page<Patient> findByCity(String city, Pageable pageable);
+
+    // Soft delete: lists must not show records flagged inactive
+    List<Patient> findByIsActiveTrue();
+    Page<Patient> findByIsActiveTrue(Pageable pageable);
 }

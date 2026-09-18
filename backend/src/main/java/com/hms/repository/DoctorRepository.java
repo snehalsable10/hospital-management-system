@@ -24,4 +24,8 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     // Paginated methods for performance optimization
     Page<Doctor> findBySpecialization(String specialization, Pageable pageable);
     Page<Doctor> findByDepartmentId(Long departmentId, Pageable pageable);
+
+    // Soft delete: lists must not show records flagged inactive
+    List<Doctor> findByIsActiveTrue();
+    Page<Doctor> findByIsActiveTrue(Pageable pageable);
 }

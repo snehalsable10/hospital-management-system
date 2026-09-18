@@ -22,4 +22,8 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
     Page<Prescription> findByPatientId(Long patientId, Pageable pageable);
     Page<Prescription> findByDoctorId(Long doctorId, Pageable pageable);
     Page<Prescription> findByStatus(String status, Pageable pageable);
+
+    // Soft delete: lists must not show records flagged inactive
+    List<Prescription> findByIsActiveTrue();
+    Page<Prescription> findByIsActiveTrue(Pageable pageable);
 }

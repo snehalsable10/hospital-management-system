@@ -37,7 +37,7 @@ public class DoctorService {
      */
     @Cacheable(value = "doctors", key = "'getAllDoctors'")
     public List<Doctor> getAllDoctors() {
-        return doctorRepository.findAll();
+        return doctorRepository.findByIsActiveTrue();
     }
 
     /**
@@ -177,7 +177,7 @@ public class DoctorService {
     public PageResponse<Doctor> getAllDoctorsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Doctor> page = doctorRepository.findAll(pageable);
+        Page<Doctor> page = doctorRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
 

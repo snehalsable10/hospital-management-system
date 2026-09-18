@@ -1,6 +1,9 @@
 package com.hms.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hms.dto.response.ApiResponse;
 import com.hms.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +15,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -31,6 +36,7 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper;
 
     /**
      * Configure Spring Security filter chain
@@ -48,6 +54,13 @@ public class SecurityConfig {
 
                 // Use stateless session (no session cookies needed with JWT)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Without these, an unauthenticated or expired request falls through to
+                // Spring's default 403. The client cannot then tell "log in again" from
+                // "you are not allowed", so an expired session never triggers a re-login.
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(unauthorizedEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler()))
 
                 .authorizeHttpRequests(authz -> authz
                         // Public endpoints - no authentication required
@@ -72,6 +85,34 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * 401 for anyone who is not authenticated at all (missing, expired or
+     * blacklisted token). Distinct from 403, which means authenticated but
+     * not permitted.
+     */
+    @Bean
+    public AuthenticationEntryPoint unauthorizedEntryPoint() {
+        return (request, response, authException) ->
+                writeError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                        "Authentication required - please log in again");
+    }
+
+    /**
+     * 403 for an authenticated caller who lacks permission for this resource.
+     */
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, accessDeniedException) ->
+                writeError(response, HttpServletResponse.SC_FORBIDDEN,
+                        "Access denied - insufficient permissions");
+    }
+
+    private void writeError(HttpServletResponse response, int status, String message) throws java.io.IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        objectMapper.writeValue(response.getWriter(), new ApiResponse(message, false));
     }
 
     /**

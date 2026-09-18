@@ -39,7 +39,7 @@ public class PrescriptionService {
      */
     @Cacheable(value = "prescriptions", key = "'getAllPrescriptions'")
     public List<Prescription> getAllPrescriptions() {
-        return prescriptionRepository.findAll();
+        return prescriptionRepository.findByIsActiveTrue();
     }
 
     /**
@@ -189,7 +189,7 @@ public class PrescriptionService {
     public PageResponse<Prescription> getAllPrescriptionsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Prescription> page = prescriptionRepository.findAll(pageable);
+        Page<Prescription> page = prescriptionRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
