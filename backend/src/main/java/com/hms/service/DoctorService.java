@@ -5,10 +5,12 @@ import com.hms.dto.response.ApiResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Department;
 import com.hms.entity.Doctor;
+import com.hms.entity.User;
 import com.hms.exception.DuplicateResourceException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.repository.DepartmentRepository;
 import com.hms.repository.DoctorRepository;
+import com.hms.repository.UserRepository;
 import com.hms.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -27,6 +29,7 @@ public class DoctorService {
 
     private final DoctorRepository doctorRepository;
     private final DepartmentRepository departmentRepository;
+    private final UserRepository userRepository;
 
     /**
      * Get all doctors
@@ -68,8 +71,10 @@ public class DoctorService {
      * Create a new doctor
      * Clears all doctor caches on create
      *
-     * @throws DuplicateResourceException if the email or license number is taken
-     * @throws IllegalArgumentException   if the referenced department does not exist
+     * @throws DuplicateResourceException if the email or license number is taken,
+     *                                    or the login account is already linked
+     *                                    to another doctor
+     * @throws IllegalArgumentException   if the referenced department or user does not exist
      */
     @CacheEvict(value = {"doctors", "doctor"}, allEntries = true)
     public ApiResponse createDoctor(DoctorRequest request) {
@@ -95,6 +100,8 @@ public class DoctorService {
         doctor.setDepartment(department);
         doctor.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
+        applyUserLink(doctor, request.getUserId(), null);
+
         doctorRepository.save(doctor);
 
         return new ApiResponse("Doctor created successfully", true);
@@ -105,8 +112,10 @@ public class DoctorService {
      * Clears all doctor caches on update
      *
      * @throws ResourceNotFoundException  if no doctor exists with the given id
-     * @throws DuplicateResourceException if the new email or license belongs to another doctor
-     * @throws IllegalArgumentException   if the referenced department does not exist
+     * @throws DuplicateResourceException if the new email or license belongs to another
+     *                                    doctor, or the login account is already linked
+     *                                    to another doctor
+     * @throws IllegalArgumentException   if the referenced department or user does not exist
      */
     @CacheEvict(value = {"doctors", "doctor"}, allEntries = true)
     public ApiResponse updateDoctor(Long id, DoctorRequest request) {
@@ -137,6 +146,8 @@ public class DoctorService {
         if (request.getIsActive() != null) {
             doctor.setIsActive(request.getIsActive());
         }
+
+        applyUserLink(doctor, request.getUserId(), id);
 
         doctorRepository.save(doctor);
 
@@ -188,5 +199,35 @@ public class DoctorService {
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
         Page<Doctor> page = doctorRepository.findBySpecialization(specialization, pageable);
         return PaginationUtil.toPageResponse(page);
+    }
+
+    /**
+     * Point this doctor record at a login account, so ownership checks can
+     * recognise the doctor as its owner.
+     *
+     * A null userId leaves any existing link untouched rather than clearing it:
+     * the doctor edit form does not send this field, and treating "absent" as
+     * "unlink" would silently revoke a doctor's access on every edit.
+     *
+     * @param currentDoctorId id of the doctor being updated, or null on create,
+     *                        so re-saving a doctor with its own link is not
+     *                        mistaken for a conflict
+     */
+    private void applyUserLink(Doctor doctor, Long userId, Long currentDoctorId) {
+        if (userId == null) {
+            return;
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+
+        doctorRepository.findByUserId(userId).ifPresent(existing -> {
+            if (!existing.getId().equals(currentDoctorId)) {
+                throw new DuplicateResourceException(
+                        "User " + userId + " is already linked to doctor " + existing.getId());
+            }
+        });
+
+        doctor.setUser(user);
     }
 }

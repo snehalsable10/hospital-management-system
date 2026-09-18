@@ -12,7 +12,6 @@ function Signup() {
     firstName: '',
     lastName: '',
     phone: '',
-    role: 'PATIENT',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -92,16 +91,10 @@ function Signup() {
                 value={formData.phone} onChange={handleChange} maxLength={20} />
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">Role</label>
-              <select name="role" className="form-select"
-                value={formData.role} onChange={handleChange} required>
-                <option value="PATIENT">Patient</option>
-                <option value="DOCTOR">Doctor</option>
-                <option value="STAFF">Staff</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-            </div>
+            <p className="text-muted small mb-3">
+              New accounts are registered as patients. Staff and doctor accounts
+              are created by an administrator.
+            </p>
 
             <button type="submit" className="btn btn-primary w-100" disabled={loading}>
               {loading ? 'Creating account...' : 'Sign Up'}

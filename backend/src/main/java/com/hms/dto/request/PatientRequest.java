@@ -58,5 +58,11 @@ public class PatientRequest {
     @Size(max = 20, message = "Emergency phone must not exceed 20 characters")
     private String emergencyPhone;
 
+    /**
+     * Optional login account to link this patient record to, so the patient can
+     * see their own record. On update, null leaves the existing link untouched.
+     */
+    private Long userId;
+
     private Boolean isActive = true;
 }

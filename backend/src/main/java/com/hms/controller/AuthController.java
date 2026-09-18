@@ -37,7 +37,7 @@ public class AuthController {
                                               HttpServletRequest request) {
         ApiResponse response = userService.signup(signupRequest);
         if (response.getSuccess()) {
-            auditService.userRegistered(signupRequest.getEmail(), signupRequest.getRole(), clientIp(request));
+                        auditService.userRegistered(signupRequest.getEmail(), UserService.DEFAULT_SIGNUP_ROLE, clientIp(request));
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);

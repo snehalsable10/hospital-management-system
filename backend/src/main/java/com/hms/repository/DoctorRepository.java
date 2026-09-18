@@ -18,6 +18,9 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     boolean existsByEmail(String email);
     boolean existsByLicenseNumber(String licenseNumber);
 
+    // A login account may own at most one doctor record
+    Optional<Doctor> findByUserId(Long userId);
+
     // Paginated methods for performance optimization
     Page<Doctor> findBySpecialization(String specialization, Pageable pageable);
     Page<Doctor> findByDepartmentId(Long departmentId, Pageable pageable);

@@ -16,6 +16,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserService {
 
+    /**
+     * Public signup always creates a PATIENT. The caller does not get to choose:
+     * accepting a client-supplied role let anyone register as an administrator.
+     */
+    public static final String DEFAULT_SIGNUP_ROLE = "PATIENT";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -44,8 +50,8 @@ public class UserService {
             user.setFirstName(signupRequest.getFirstName());
             user.setLastName(signupRequest.getLastName());
             user.setPhone(signupRequest.getPhone());
-            user.setRole(signupRequest.getRole());
-            
+            user.setRole(DEFAULT_SIGNUP_ROLE);
+
             // Hash password (bcrypt)
             user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
             user.setIsActive(true);

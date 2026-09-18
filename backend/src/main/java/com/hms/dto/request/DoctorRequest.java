@@ -37,5 +37,12 @@ public class DoctorRequest {
     @NotNull(message = "Department ID is required")
     private Long departmentId;
 
+    /**
+     * Optional login account to link this doctor record to, so the doctor can
+     * see their own record, appointments and prescriptions. On update, null
+     * leaves the existing link untouched.
+     */
+    private Long userId;
+
     private Boolean isActive = true;
 }

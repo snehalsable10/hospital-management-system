@@ -18,6 +18,9 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     List<Patient> findByCity(String city);
     boolean existsByEmail(String email);
 
+    // A login account may own at most one patient record
+    Optional<Patient> findByUserId(Long userId);
+
     // Paginated methods for performance optimization
     Page<Patient> findByFirstNameIgnoreCaseContaining(String firstName, Pageable pageable);
     Page<Patient> findByLastNameIgnoreCaseContaining(String lastName, Pageable pageable);

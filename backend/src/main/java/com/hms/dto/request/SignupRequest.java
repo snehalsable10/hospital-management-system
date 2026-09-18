@@ -33,7 +33,7 @@ public class SignupRequest {
     @Size(max = 20, message = "Phone number must not exceed 20 characters")
     private String phone;
 
-    @NotBlank(message = "Role is required")
-    private String role; // ADMIN, DOCTOR, PATIENT, STAFF
+    // No role field: public signup always creates a PATIENT.
+    // Privileged accounts are never self-assigned by the caller.
 
 }

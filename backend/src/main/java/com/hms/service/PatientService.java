@@ -4,9 +4,11 @@ import com.hms.dto.request.PatientRequest;
 import com.hms.dto.response.ApiResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Patient;
+import com.hms.entity.User;
 import com.hms.exception.DuplicateResourceException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.repository.PatientRepository;
+import com.hms.repository.UserRepository;
 import com.hms.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -25,6 +27,7 @@ import java.util.Optional;
 public class PatientService {
 
     private final PatientRepository patientRepository;
+    private final UserRepository userRepository;
 
     /**
      * Get all patients
@@ -124,7 +127,10 @@ public class PatientService {
      * Create a new patient
      * Clears all patient caches on create
      *
-     * @throws DuplicateResourceException if the email is already registered
+     * @throws DuplicateResourceException if the email is already registered,
+     *                                    or the login account is already linked
+     *                                    to another patient
+     * @throws IllegalArgumentException   if the referenced user does not exist
      */
     @CacheEvict(value = {"patients", "patient"}, allEntries = true)
     public ApiResponse createPatient(PatientRequest request) {
@@ -149,6 +155,8 @@ public class PatientService {
         patient.setEmergencyPhone(request.getEmergencyPhone());
         patient.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
+        applyUserLink(patient, request.getUserId(), null);
+
         patientRepository.save(patient);
 
         return new ApiResponse("Patient created successfully", true);
@@ -159,7 +167,10 @@ public class PatientService {
      * Clears patient caches on update
      *
      * @throws ResourceNotFoundException  if no patient exists with the given id
-     * @throws DuplicateResourceException if the new email belongs to another patient
+     * @throws DuplicateResourceException if the new email belongs to another patient,
+     *                                    or the login account is already linked
+     *                                    to another patient
+     * @throws IllegalArgumentException   if the referenced user does not exist
      */
     @CacheEvict(value = {"patients", "patient"}, allEntries = true)
     public ApiResponse updatePatient(Long id, PatientRequest request) {
@@ -190,6 +201,8 @@ public class PatientService {
             patient.setIsActive(request.getIsActive());
         }
 
+        applyUserLink(patient, request.getUserId(), id);
+
         patientRepository.save(patient);
 
         return new ApiResponse("Patient updated successfully", true);
@@ -210,5 +223,35 @@ public class PatientService {
         patientRepository.save(patient);
 
         return new ApiResponse("Patient deleted successfully", true);
+    }
+
+    /**
+     * Point this patient record at a login account, so ownership checks can
+     * recognise the patient as its owner.
+     *
+     * A null userId leaves any existing link untouched rather than clearing it:
+     * the patient edit form does not send this field, and treating "absent" as
+     * "unlink" would silently revoke a patient's access on every edit.
+     *
+     * @param currentPatientId id of the patient being updated, or null on create,
+     *                         so re-saving a patient with its own link is not
+     *                         mistaken for a conflict
+     */
+    private void applyUserLink(Patient patient, Long userId, Long currentPatientId) {
+        if (userId == null) {
+            return;
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+
+        patientRepository.findByUserId(userId).ifPresent(existing -> {
+            if (!existing.getId().equals(currentPatientId)) {
+                throw new DuplicateResourceException(
+                        "User " + userId + " is already linked to patient " + existing.getId());
+            }
+        });
+
+        patient.setUser(user);
     }
 }

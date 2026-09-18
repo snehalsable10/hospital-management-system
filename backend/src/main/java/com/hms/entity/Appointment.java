@@ -1,9 +1,12 @@
 package com.hms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
@@ -59,6 +62,12 @@ public class Appointment {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // Excluded from JSON, toString and equals: each prescription points back here.
+    // Use /api/prescriptions/appointment/{id}.
+
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Prescription> prescriptions = new ArrayList<>();
 

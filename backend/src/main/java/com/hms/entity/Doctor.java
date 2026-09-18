@@ -1,9 +1,12 @@
 package com.hms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +16,8 @@ import java.util.List;
     @Index(name = "idx_doctor_email", columnList = "email", unique = true),
     @Index(name = "idx_doctor_department_id", columnList = "department_id"),
     @Index(name = "idx_doctor_is_active", columnList = "is_active"),
-    @Index(name = "idx_doctor_specialization", columnList = "specialization")
+    @Index(name = "idx_doctor_specialization", columnList = "specialization"),
+    @Index(name = "idx_doctor_user_id", columnList = "user_id")
 })
 @Data
 @NoArgsConstructor
@@ -42,6 +46,18 @@ public class Doctor {
     @Column(unique = true, nullable = false, length = 50)
     private String licenseNumber;
 
+    /**
+     * The login account this doctor record belongs to, if any.
+     * Ownership checks (@authService.isOwnDoctor) compare against this.
+     * JSON-ignored: User carries the bcrypt password hash.
+     */
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = true)
+    private User user;
+
     @ManyToOne
     @JoinColumn(name = "department_id", nullable = false)
     private Department department;
@@ -55,9 +71,18 @@ public class Doctor {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // Excluded from JSON, toString and equals to break the parent/child cycle.
+    // Use /api/appointments/doctor/{id} and /api/prescriptions/doctor/{id}.
+
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Appointment> appointments = new ArrayList<>();
 
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Prescription> prescriptions = new ArrayList<>();
 
