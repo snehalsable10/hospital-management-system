@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+// Set VITE_API_URL per environment (see frontend/.env). The fallback keeps
+// local development working without any env file present.
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
   headers: {
     'Content-Type': 'application/json',
   },
