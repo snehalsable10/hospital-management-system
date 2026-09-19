@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import authService from '../../services/authService';
+import { useAuth } from '../../hooks/useAuth';
 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -20,7 +21,9 @@ function Login() {
     setError('');
 
     try {
-      const result = await authService.login(formData);
+      // Through the context, so the navbar and sidebar see the new session
+      // immediately instead of after a page reload.
+      const result = await login(formData);
       if (result.success) {
         navigate('/dashboard');
       } else {
@@ -34,45 +37,67 @@ function Login() {
   };
 
   return (
-    <div className="container" style={{ maxWidth: '420px', marginTop: '80px' }}>
-      <div className="card shadow">
-        <div className="card-body p-4">
-          <h3 className="text-center mb-4">Hospital Management System</h3>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Hospital Management System</h1>
+          <p className="text-sm text-gray-600 mt-1">Sign in to continue</p>
+        </div>
 
-          {error && <div className="alert alert-danger">{error}</div>}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+          {error && (
+            <div className="mb-5 rounded-lg border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-800">
+              {error}
+            </div>
+          )}
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-3">
-              <label className="form-label">Email</label>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Email
+              </label>
               <input
+                id="email"
                 type="email"
                 name="email"
-                className="form-control"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 value={formData.email}
                 onChange={handleChange}
+                autoComplete="email"
                 required
               />
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">Password</label>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Password
+              </label>
               <input
+                id="password"
                 type="password"
                 name="password"
-                className="form-control"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 value={formData.password}
                 onChange={handleChange}
+                autoComplete="current-password"
                 required
               />
             </div>
 
-            <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
 
-          <p className="text-center mt-3 mb-0">
-            No account? <Link to="/signup">Sign up</Link>
+          <p className="text-center text-sm text-gray-600 mt-6">
+            No account?{' '}
+            <Link to="/signup" className="font-semibold text-primary-600 hover:text-primary-700">
+              Sign up
+            </Link>
           </p>
         </div>
       </div>

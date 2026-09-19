@@ -14,23 +14,32 @@ import {
   ChevronRight,
   BedDouble,
 } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+
+/**
+ * `roles` mirrors the @PreAuthorize rule on each module's list endpoint.
+ * Showing a link the backend will refuse is worse than hiding it: the user
+ * clicks it and gets an access-denied page instead of a menu that reflects
+ * what they can actually do.
+ */
+const MENU_ITEMS = [
+  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['ADMIN', 'STAFF', 'DOCTOR', 'PATIENT'] },
+  { path: '/departments', icon: Building2, label: 'Departments', roles: ['ADMIN', 'STAFF', 'DOCTOR', 'PATIENT'] },
+  { path: '/doctors', icon: UserCog, label: 'Doctors', roles: ['ADMIN', 'STAFF', 'DOCTOR', 'PATIENT'] },
+  { path: '/patients', icon: Users, label: 'Patients', roles: ['ADMIN', 'STAFF', 'DOCTOR'] },
+  { path: '/appointments', icon: Calendar, label: 'Appointments', roles: ['ADMIN', 'STAFF'] },
+  { path: '/prescriptions', icon: FileText, label: 'Prescriptions', roles: ['ADMIN', 'STAFF'] },
+  { path: '/medical-history', icon: ClipboardList, label: 'Medical History', roles: ['ADMIN', 'STAFF'] },
+  { path: '/laboratory-tests', icon: FlaskConical, label: 'Lab Tests', roles: ['ADMIN', 'STAFF'] },
+  { path: '/bills', icon: DollarSign, label: 'Bills', roles: ['ADMIN', 'STAFF'] },
+  { path: '/rooms', icon: BedDouble, label: 'Rooms', roles: ['ADMIN', 'STAFF', 'DOCTOR', 'PATIENT'] },
+];
 
 const Sidebar = ({ open }) => {
   const location = useLocation();
+  const { role } = useAuth();
 
-  const menuItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/departments', icon: Building2, label: 'Departments' },
-    { path: '/doctors', icon: UserCog, label: 'Doctors' },
-    { path: '/patients', icon: Users, label: 'Patients' },
-    { path: '/appointments', icon: Calendar, label: 'Appointments' },
-    { path: '/prescriptions', icon: FileText, label: 'Prescriptions' },
-    { path: '/medical-history', icon: ClipboardList, label: 'Medical History' },
-    { path: '/laboratory-tests', icon: FlaskConical, label: 'Lab Tests' },
-    { path: '/bills', icon: DollarSign, label: 'Bills' },
-    { path: '/rooms', icon: BedDouble, label: 'Rooms' },
-  ];
-
+  const visibleItems = MENU_ITEMS.filter((item) => !role || item.roles.includes(role));
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -39,7 +48,6 @@ const Sidebar = ({ open }) => {
         open ? 'w-sidebar' : 'w-0'
       } bg-primary-900 text-white fixed left-0 top-0 h-screen overflow-y-auto transition-all duration-300 z-40 shadow-lg`}
     >
-      {/* Logo Section */}
       {open && (
         <div className="p-6 border-b border-primary-700">
           <div className="flex items-center gap-3">
@@ -54,9 +62,8 @@ const Sidebar = ({ open }) => {
         </div>
       )}
 
-      {/* Navigation Menu */}
       <nav className="p-4 space-y-2">
-        {menuItems.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
 
@@ -83,11 +90,10 @@ const Sidebar = ({ open }) => {
         })}
       </nav>
 
-      {/* Sidebar Footer */}
       {open && (
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-primary-700 bg-primary-950">
           <p className="text-xs text-primary-400 text-center">
-            © 2024 Hospital Management System
+            © {new Date().getFullYear()} Hospital Management System
           </p>
         </div>
       )}

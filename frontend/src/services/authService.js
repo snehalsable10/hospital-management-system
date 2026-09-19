@@ -27,9 +27,20 @@ const authService = {
     return apiResponse;
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  /**
+   * Tell the server to blacklist this token before discarding it locally.
+   * A network failure must not trap the user in a logged-in state, so the
+   * local session is cleared either way.
+   */
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (err) {
+      // Already logging out; nothing useful to do with the error.
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
   },
 
   getCurrentUser: () => {

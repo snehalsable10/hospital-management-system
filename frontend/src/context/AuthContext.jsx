@@ -3,88 +3,86 @@ import authService from '../services/authService';
 
 export const AuthContext = createContext(null);
 
+/**
+ * authService owns localStorage; this context mirrors it into React state so
+ * components re-render when the session changes. Previously the two disagreed:
+ * login wrote storage directly and context state stayed null until a reload.
+ */
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => authService.getCurrentUser());
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Initialize auth state from localStorage
+  // Keep other tabs in step: logging out in one tab clears the others.
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-
-    if (savedToken) {
-      setToken(savedToken);
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
-    }
-    setLoading(false);
+    const syncFromStorage = () => {
+      setUser(authService.getCurrentUser());
+      setToken(localStorage.getItem('token'));
+    };
+    window.addEventListener('storage', syncFromStorage);
+    return () => window.removeEventListener('storage', syncFromStorage);
   }, []);
 
-  const login = async (email, password) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await authService.login(email, password);
-
-      const { token: newToken, user: newUser } = response.data;
-      setToken(newToken);
-      setUser(newUser);
-
-      localStorage.setItem('token', newToken);
-      localStorage.setItem('user', JSON.stringify(newUser));
-
-      return response;
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Login failed';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signup = async (userData) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await authService.signup(userData);
-
-      const { token: newToken, user: newUser } = response.data;
-      setToken(newToken);
-      setUser(newUser);
-
-      localStorage.setItem('token', newToken);
-      localStorage.setItem('user', JSON.stringify(newUser));
-
-      return response;
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Signup failed';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
+  const login = async (credentials) => {
+    setLoading(true);
     setError(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    try {
+      const response = await authService.login(credentials);
+
+      if (response.success) {
+        setUser(authService.getCurrentUser());
+        setToken(localStorage.getItem('token'));
+      } else {
+        setError(response.message);
+      }
+
+      return response;
+    } catch (err) {
+      const message = err.response?.data?.message || 'Login failed';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const isAuthenticated = !!token && !!user;
+  /**
+   * Signup does not return a token - the backend creates the account and the
+   * user logs in afterwards. No session state is set here.
+   */
+  const signup = async (userData) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await authService.signup(userData);
+      if (!response.success) {
+        setError(response.message);
+      }
+      return response;
+    } catch (err) {
+      const message = err.response?.data?.message || 'Signup failed';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    await authService.logout();
+    setUser(null);
+    setToken(null);
+    setError(null);
+  };
 
   const value = {
     user,
     token,
     loading,
     error,
-    isAuthenticated,
+    role: user?.role || null,
+    isAuthenticated: !!token,
     login,
     signup,
     logout,
