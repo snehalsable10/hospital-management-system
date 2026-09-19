@@ -6,7 +6,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 
@@ -25,16 +24,17 @@ const BarChart = ({
       <ResponsiveContainer width="100%" height={height}>
         <RechartBarChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey={xAxisKey} stroke="#6b7280" />
-          <YAxis stroke="#6b7280" />
+          <XAxis dataKey={xAxisKey} stroke="#6b7280" fontSize={12} />
+          <YAxis stroke="#6b7280" fontSize={12} allowDecimals={false} />
           <Tooltip
+            cursor={{ fill: 'rgba(0,0,0,0.04)' }}
             contentStyle={{
               backgroundColor: '#fff',
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
             }}
           />
-          <Legend />
+          {/* No <Legend />: a single series legend just prints the dataKey ("value") */}
           <Bar
             dataKey={dataKey}
             fill={color}

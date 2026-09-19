@@ -35,7 +35,9 @@ const PieChart = ({
             animationDuration={800}
           >
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              // stroke="none": the default white stroke draws a visible radius
+              // seam across a slice that covers the whole circle.
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
             ))}
           </Pie>
           <Tooltip

@@ -61,6 +61,15 @@ const Dashboard = () => {
   const [occupancy, setOccupancy] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Which datasets this role is allowed to see; panels for the rest are hidden
+  // rather than shown empty, which would read as "no data" instead of "not yours".
+  const [available, setAvailable] = useState({
+    patients: true,
+    doctors: true,
+    appointments: true,
+    bills: true,
+    rooms: true,
+  });
 
   const user = authService.getCurrentUser();
 
@@ -73,42 +82,69 @@ const Dashboard = () => {
     setError('');
 
     try {
-      // Fired together rather than awaited one after another: these five
-      // requests do not depend on each other.
-      const [patientsRes, doctorsRes, appointmentsRes, billsRes, roomsRes] =
-        await Promise.all([
-          patientService.getAllPatients(),
-          doctorService.getAllDoctors(),
-          appointmentService.getAllAppointments(),
-          billService.getAllBills(),
-          roomService.getAllRooms(),
-        ]);
+      // allSettled, not all: these endpoints have different role rules, and a
+      // doctor is legitimately refused bills and appointments. Promise.all
+      // would reject on that 403 and throw away the data that did arrive.
+      const results = await Promise.allSettled([
+        patientService.getAllPatients(),
+        doctorService.getAllDoctors(),
+        appointmentService.getAllAppointments(),
+        billService.getAllBills(),
+        roomService.getAllRooms(),
+      ]);
 
-      const patients = patientsRes.data || [];
-      const doctors = doctorsRes.data || [];
-      const appointments = appointmentsRes.data || [];
-      const bills = billsRes.data || [];
-      const rooms = roomsRes.data || [];
+      // null means "this caller may not see it" - distinct from an empty list.
+      const unpack = (result) =>
+        result.status === 'fulfilled' ? result.value?.data || [] : null;
 
-      const totalRevenue = bills.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
-      const outstanding = bills
+      const [patients, doctors, appointments, bills, rooms] = results.map(unpack);
+
+      // A 403 is an expected answer for this role; anything else is a real fault.
+      const realFailure = results.find(
+        (r) => r.status === 'rejected' && r.reason?.response?.status !== 403
+      );
+      if (realFailure) {
+        setError(
+          realFailure.reason?.response?.data?.message ||
+            'Some dashboard data could not be loaded.'
+        );
+      }
+
+      setAvailable({
+        patients: patients !== null,
+        doctors: doctors !== null,
+        appointments: appointments !== null,
+        bills: bills !== null,
+        rooms: rooms !== null,
+      });
+
+      // Past this point a refused dataset behaves as empty, so the arithmetic
+      // below stays simple; `available` remembers the difference for rendering.
+      const safePatients = patients || [];
+      const safeDoctors = doctors || [];
+      const safeAppointments = appointments || [];
+      const safeBills = bills || [];
+      const safeRooms = rooms || [];
+
+      const totalRevenue = safeBills.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
+      const outstanding = safeBills
         .filter((b) => b.status !== 'PAID')
         .reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
 
       setStats({
-        totalPatients: patients.length,
-        totalDoctors: doctors.length,
-        totalAppointments: appointments.length,
-        totalRooms: rooms.length,
-        occupiedBeds: rooms.reduce((sum, r) => sum + (r.occupiedBeds || 0), 0),
-        totalBeds: rooms.reduce((sum, r) => sum + (r.capacity || 0), 0),
+        totalPatients: safePatients.length,
+        totalDoctors: safeDoctors.length,
+        totalAppointments: safeAppointments.length,
+        totalRooms: safeRooms.length,
+        occupiedBeds: safeRooms.reduce((sum, r) => sum + (r.occupiedBeds || 0), 0),
+        totalBeds: safeRooms.reduce((sum, r) => sum + (r.capacity || 0), 0),
         totalRevenue,
         outstanding,
-        paidBills: bills.filter((b) => b.status === 'PAID').length,
-        unpaidBills: bills.filter((b) => b.status === 'UNPAID').length,
+        paidBills: safeBills.filter((b) => b.status === 'PAID').length,
+        unpaidBills: safeBills.filter((b) => b.status === 'UNPAID').length,
       });
 
-      const statusCounts = appointments.reduce((acc, a) => {
+      const statusCounts = safeAppointments.reduce((acc, a) => {
         acc[a.status] = (acc[a.status] || 0) + 1;
         return acc;
       }, {});
@@ -116,7 +152,7 @@ const Dashboard = () => {
         Object.entries(statusCounts).map(([name, value]) => ({ name, value }))
       );
 
-      const deptCounts = doctors.reduce((acc, d) => {
+      const deptCounts = safeDoctors.reduce((acc, d) => {
         const name = d.department?.name || 'Unassigned';
         acc[name] = (acc[name] || 0) + 1;
         return acc;
@@ -125,7 +161,7 @@ const Dashboard = () => {
         Object.entries(deptCounts).map(([name, value]) => ({ name, value }))
       );
 
-      const byType = rooms.reduce((acc, room) => {
+      const byType = safeRooms.reduce((acc, room) => {
         const type = room.roomType || 'Other';
         if (!acc[type]) acc[type] = { type, occupied: 0, total: 0 };
         acc[type].occupied += room.occupiedBeds || 0;
@@ -135,7 +171,7 @@ const Dashboard = () => {
       setOccupancy(Object.values(byType));
 
       setRecentAppointments(
-        [...appointments]
+        [...safeAppointments]
           .sort((a, b) => new Date(b.appointmentDate) - new Date(a.appointmentDate))
           .slice(0, 5)
       );
@@ -199,56 +235,74 @@ const Dashboard = () => {
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-        <KPICard title="Total Patients" value={stats.totalPatients} icon={Users} color="primary" />
-        <KPICard
-          title="Appointments"
-          value={stats.totalAppointments}
-          icon={CalendarDays}
-          color="info"
-        />
-        <KPICard
-          title="Revenue Billed"
-          value={money(stats.totalRevenue)}
-          icon={IndianRupee}
-          color="success"
-        />
-        <KPICard title="Doctors" value={stats.totalDoctors} icon={UserCog} color="warning" />
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {appointmentsByStatus.length > 0 ? (
-          <BarChart
-            title="Appointments by Status"
-            data={appointmentsByStatus}
-            dataKey="value"
-            xAxisKey="name"
-            color="#3b82f6"
-          />
-        ) : (
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Appointments by Status</h3>
-            <p className="text-gray-500 text-sm">No appointments recorded yet.</p>
-          </div>
+        {available.patients && (
+          <KPICard title="Total Patients" value={stats.totalPatients} icon={Users} color="primary" />
         )}
-
-        {doctorsByDepartment.length > 0 ? (
-          <PieChart
-            title="Doctors by Department"
-            data={doctorsByDepartment}
-            dataKey="value"
-            nameKey="name"
+        {available.appointments && (
+          <KPICard
+            title="Appointments"
+            value={stats.totalAppointments}
+            icon={CalendarDays}
+            color="info"
           />
-        ) : (
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Doctors by Department</h3>
-            <p className="text-gray-500 text-sm">No doctors registered yet.</p>
-          </div>
+        )}
+        {available.bills && (
+          <KPICard
+            title="Revenue Billed"
+            value={money(stats.totalRevenue)}
+            icon={IndianRupee}
+            color="success"
+          />
+        )}
+        {available.doctors && (
+          <KPICard title="Doctors" value={stats.totalDoctors} icon={UserCog} color="warning" />
         )}
       </div>
+
+      {/* Charts. A panel the role cannot see is omitted entirely - showing it
+          empty would read as "no data" rather than "not available to you". */}
+      {(available.appointments || available.doctors) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {available.appointments &&
+            (appointmentsByStatus.length > 0 ? (
+              <BarChart
+                title="Appointments by Status"
+                data={appointmentsByStatus}
+                dataKey="value"
+                xAxisKey="name"
+                color="#3b82f6"
+              />
+            ) : (
+              <div className="card">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Appointments by Status</h3>
+                <p className="text-gray-500 text-sm">No appointments recorded yet.</p>
+              </div>
+            ))}
+
+          {available.doctors &&
+            (doctorsByDepartment.length > 0 ? (
+              <PieChart
+                title="Doctors by Department"
+                data={doctorsByDepartment}
+                dataKey="value"
+                nameKey="name"
+              />
+            ) : (
+              <div className="card">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Doctors by Department</h3>
+                <p className="text-gray-500 text-sm">No doctors registered yet.</p>
+              </div>
+            ))}
+        </div>
+      )}
 
       {/* Recent appointments + billing/occupancy */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div
+        className={`grid grid-cols-1 gap-5 ${
+          available.appointments ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+        }`}
+      >
+        {available.appointments && (
         <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           <div className="flex items-center px-5 py-4 border-b border-gray-200">
             <h3 className="text-base font-semibold text-gray-900">Recent Appointments</h3>
@@ -309,9 +363,12 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+        )}
 
+        {(available.bills || available.rooms) && (
         <div className="space-y-5">
           {/* Billing */}
+          {available.bills && (
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
             <h3 className="text-base font-semibold text-gray-900 mb-4">Billing</h3>
             <dl className="space-y-3 text-sm">
@@ -335,8 +392,10 @@ const Dashboard = () => {
               Go to billing <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
+          )}
 
           {/* Bed occupancy */}
+          {available.rooms && (
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
             <div className="flex items-center mb-4">
               <h3 className="text-base font-semibold text-gray-900">Bed Occupancy</h3>
@@ -384,7 +443,9 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+          )}
         </div>
+        )}
       </div>
     </div>
   );
