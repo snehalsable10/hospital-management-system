@@ -1,74 +1,65 @@
 import api from './api';
 
+/**
+ * Doctors can be filtered by department or specialisation. There is no
+ * name-search endpoint, so the page filters on those two instead.
+ */
 const doctorService = {
-  // Get all doctors
   getAllDoctors: async () => {
-    try {
-      const response = await api.get('/doctors');
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get('/doctors');
+    return response.data;
   },
 
-  // Get a specific doctor by ID
+  getAllDoctorsPaginated: async (pageNumber = 0, pageSize = 10) => {
+    const response = await api.get('/doctors/paginated', {
+      params: { pageNumber, pageSize },
+    });
+    return response.data;
+  },
+
   getDoctorById: async (id) => {
-    try {
-      const response = await api.get(`/doctors/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/doctors/${id}`);
+    return response.data;
   },
 
-  // Get all doctors in a department
   getDoctorsByDepartment: async (departmentId) => {
-    try {
-      const response = await api.get(`/doctors/department/${departmentId}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/doctors/department/${departmentId}`);
+    return response.data;
   },
 
-  // Get doctors by specialization
+  getDoctorsByDepartmentPaginated: async (departmentId, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(`/doctors/department/${departmentId}/paginated`, {
+      params: { pageNumber, pageSize },
+    });
+    return response.data;
+  },
+
   getDoctorsBySpecialization: async (specialization) => {
-    try {
-      const response = await api.get(`/doctors/specialization/${specialization}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/doctors/specialization/${encodeURIComponent(specialization)}`);
+    return response.data;
   },
 
-  // Create a new doctor
+  getDoctorsBySpecializationPaginated: async (specialization, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(
+      `/doctors/specialization/${encodeURIComponent(specialization)}/paginated`,
+      { params: { pageNumber, pageSize } }
+    );
+    return response.data;
+  },
+
   createDoctor: async (doctorData) => {
-    try {
-      const response = await api.post('/doctors', doctorData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post('/doctors', doctorData);
+    return response.data;
   },
 
-  // Update an existing doctor
   updateDoctor: async (id, doctorData) => {
-    try {
-      const response = await api.put(`/doctors/${id}`, doctorData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.put(`/doctors/${id}`, doctorData);
+    return response.data;
   },
 
-  // Delete a doctor
   deleteDoctor: async (id) => {
-    try {
-      const response = await api.delete(`/doctors/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.delete(`/doctors/${id}`);
+    return response.data;
   },
 };
 
