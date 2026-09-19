@@ -1,456 +1,576 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import Table from '../components/common/Table';
+import SearchBar from '../components/common/SearchBar';
+import Modal from '../components/common/Modal';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import Button from '../components/common/Button';
+import Badge from '../components/common/Badge';
+import EmptyState from '../components/common/EmptyState';
+import InputField from '../components/forms/InputField';
+import SelectField from '../components/forms/SelectField';
+import DateField from '../components/forms/DateField';
+import { useNotification } from '../hooks/useNotification';
+import { useAuth } from '../hooks/useAuth';
 import patientService from '../services/patientService';
 
+const PAGE_SIZE = 10;
+
+const EMPTY_FORM = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  dateOfBirth: '',
+  gender: 'Male',
+  address: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  bloodGroup: '',
+  emergencyContact: '',
+  emergencyPhone: '',
+  userId: '',
+  isActive: true,
+};
+
+// The backend exposes one endpoint per searchable field rather than a single
+// query, so the field being searched has to be chosen explicitly.
+const SEARCH_FIELDS = [
+  { value: 'firstName', label: 'First name' },
+  { value: 'lastName', label: 'Last name' },
+  { value: 'city', label: 'City' },
+];
+
+const GENDERS = ['Male', 'Female', 'Other'];
+
 function PatientManagement() {
+  const { role } = useAuth();
+  const notify = useNotification();
+
+  const canCreate = role === 'ADMIN' || role === 'STAFF';
+  const canEdit = role === 'ADMIN' || role === 'STAFF';
+  const canDelete = role === 'ADMIN';
+
   const [patients, setPatients] = useState([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
-  const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState('firstName');
+
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: 'Male',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    bloodGroup: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    isActive: true,
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
-  // Fetch all patients on mount
-  useEffect(() => {
-    loadPatients();
-  }, []);
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const loadPatients = async () => {
+  const loadPatients = useCallback(async () => {
     setLoading(true);
-    setError('');
     try {
-      const result = await patientService.getAllPatients();
-      if (result.success) {
-        setPatients(result.data || []);
+      let result;
+      if (!searchTerm.trim()) {
+        result = await patientService.getAllPatientsPaginated(page, PAGE_SIZE);
+      } else if (searchField === 'firstName') {
+        result = await patientService.searchByFirstNamePaginated(searchTerm, page, PAGE_SIZE);
+      } else if (searchField === 'lastName') {
+        result = await patientService.searchByLastNamePaginated(searchTerm, page, PAGE_SIZE);
       } else {
-        setError(result.message || 'Failed to load patients');
+        result = await patientService.searchByCityPaginated(searchTerm, page, PAGE_SIZE);
       }
+
+      const pageData = result.data || {};
+      setPatients(pageData.content || []);
+      setTotalPages(pageData.totalPages || 0);
+      setTotalElements(pageData.totalElements || 0);
     } catch (err) {
-      setError(err.response?.data?.message || 'Error loading patients');
+      notify.error(err.response?.data?.message || 'Could not load patients');
+      setPatients([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
+  }, [page, searchTerm, searchField, notify]);
+
+  useEffect(() => {
+    loadPatients();
+  }, [loadPatients]);
+
+  const handleSearch = (term) => {
+    setPage(0); // a new query starts from the first page, not the current one
+    setSearchTerm(term);
+  };
+
+  const openCreate = () => {
+    setEditingId(null);
+    setFormData(EMPTY_FORM);
+    setFieldErrors({});
+    setModalOpen(true);
+  };
+
+  const openEdit = (patient) => {
+    setEditingId(patient.id);
+    setFormData({
+      firstName: patient.firstName || '',
+      lastName: patient.lastName || '',
+      email: patient.email || '',
+      phone: patient.phone || '',
+      dateOfBirth: patient.dateOfBirth || '',
+      gender: patient.gender || 'Male',
+      address: patient.address || '',
+      city: patient.city || '',
+      state: patient.state || '',
+      zipCode: patient.zipCode || '',
+      bloodGroup: patient.bloodGroup || '',
+      emergencyContact: patient.emergencyContact || '',
+      emergencyPhone: patient.emergencyPhone || '',
+      // Left blank deliberately: the backend treats an absent userId as
+      // "leave the existing link alone" rather than "unlink".
+      userId: '',
+      isActive: patient.isActive ?? true,
+    });
+    setFieldErrors({});
+    setModalOpen(true);
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setSaving(true);
+    setFieldErrors({});
+
+    const payload = {
+      ...formData,
+      email: formData.email.trim() || null,
+      bloodGroup: formData.bloodGroup.trim() || null,
+      emergencyContact: formData.emergencyContact.trim() || null,
+      emergencyPhone: formData.emergencyPhone.trim() || null,
+      userId: formData.userId ? Number(formData.userId) : null,
+    };
 
     try {
-      let result;
-      if (editingId) {
-        result = await patientService.updatePatient(editingId, formData);
-      } else {
-        result = await patientService.createPatient(formData);
-      }
+      const result = editingId
+        ? await patientService.updatePatient(editingId, payload)
+        : await patientService.createPatient(payload);
 
-      if (result.success) {
-        setSuccess(result.message);
-        setShowForm(false);
-        setEditingId(null);
-        setFormData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          dateOfBirth: '',
-          gender: 'Male',
-          address: '',
-          city: '',
-          state: '',
-          zipCode: '',
-          bloodGroup: '',
-          emergencyContact: '',
-          emergencyPhone: '',
-          isActive: true,
-        });
-        loadPatients();
-      } else {
-        setError(result.message);
-      }
+      notify.success(result.message);
+      setModalOpen(false);
+      loadPatients();
     } catch (err) {
-      setError(err.response?.data?.message || 'Operation failed');
+      const body = err.response?.data;
+      // A validation failure returns a field -> message map in `data`;
+      // anything else (404, 409, 400) is a single message.
+      if (body?.data && typeof body.data === 'object') {
+        setFieldErrors(body.data);
+        notify.error(body.message || 'Please correct the highlighted fields');
+      } else {
+        notify.error(body?.message || 'Could not save the patient');
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleEdit = (patient) => {
-    setEditingId(patient.id);
-    setFormData({
-      firstName: patient.firstName,
-      lastName: patient.lastName,
-      email: patient.email || '',
-      phone: patient.phone,
-      dateOfBirth: patient.dateOfBirth,
-      gender: patient.gender,
-      address: patient.address,
-      city: patient.city,
-      state: patient.state,
-      zipCode: patient.zipCode,
-      bloodGroup: patient.bloodGroup || '',
-      emergencyContact: patient.emergencyContact || '',
-      emergencyPhone: patient.emergencyPhone || '',
-      isActive: patient.isActive,
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this patient?')) {
-      return;
-    }
-
-    setError('');
-    setSuccess('');
-
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      const result = await patientService.deletePatient(id);
-      if (result.success) {
-        setSuccess(result.message);
-        loadPatients();
+      const result = await patientService.deletePatient(confirmTarget.id);
+      notify.success(result.message);
+      setConfirmTarget(null);
+      // Deleting the only row on the last page would leave it empty.
+      if (patients.length === 1 && page > 0) {
+        setPage(page - 1);
       } else {
-        setError(result.message);
+        loadPatients();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Delete failed');
+      notify.error(err.response?.data?.message || 'Could not delete the patient');
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const handleCancel = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      dateOfBirth: '',
-      gender: 'Male',
-      address: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      bloodGroup: '',
-      emergencyContact: '',
-      emergencyPhone: '',
-      isActive: true,
-    });
-    setError('');
-  };
+  const columns = [
+    {
+      key: 'firstName',
+      label: 'Patient',
+      render: (_value, row) => (
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+            {`${row.firstName?.[0] || ''}${row.lastName?.[0] || ''}`.toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium text-gray-900 truncate">
+              {row.firstName} {row.lastName}
+            </p>
+            <p className="text-xs text-gray-500 truncate">{row.email || 'No email'}</p>
+          </div>
+        </div>
+      ),
+    },
+    { key: 'gender', label: 'Gender' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'city', label: 'City' },
+    {
+      key: 'bloodGroup',
+      label: 'Blood',
+      render: (value) => value || <span className="text-gray-400">—</span>,
+    },
+    {
+      key: 'isActive',
+      label: 'Status',
+      render: (value) => (
+        <Badge variant={value ? 'success' : 'gray'} size="sm">
+          {value ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+  ];
+
+  const showingFrom = totalElements === 0 ? 0 : page * PAGE_SIZE + 1;
+  const showingTo = Math.min((page + 1) * PAGE_SIZE, totalElements);
 
   return (
-    <div className="container mt-4">
-      <h1 className="mb-4">Patient Management</h1>
+    <div className="p-6 space-y-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Patients</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Register, search and manage patient records.
+          </p>
+        </div>
+        {canCreate && (
+          <Button onClick={openCreate} icon={Plus}>
+            Add Patient
+          </Button>
+        )}
+      </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
-      {success && <div className="alert alert-success">{success}</div>}
+      {/* Toolbar */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <SearchBar
+            className="flex-1"
+            placeholder={`Search by ${SEARCH_FIELDS.find((f) => f.value === searchField)?.label.toLowerCase()}...`}
+            onSearch={handleSearch}
+          />
+          <select
+            value={searchField}
+            onChange={(e) => {
+              setSearchField(e.target.value);
+              setPage(0);
+            }}
+            className="px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 sm:w-44"
+            aria-label="Search field"
+          >
+            {SEARCH_FIELDS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-      {/* Add/Edit Form */}
-      {showForm && (
-        <div className="card mb-4 bg-light">
-          <div className="card-body">
-            <h5>{editingId ? 'Edit Patient' : 'Add New Patient'}</h5>
-            <form onSubmit={handleSubmit}>
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">First Name *</label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    className="form-control"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    required
-                    minLength={2}
-                    maxLength={50}
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Last Name *</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    className="form-control"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    required
-                    minLength={2}
-                    maxLength={50}
-                  />
-                </div>
+      {/* Table */}
+      {loading ? (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-3">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="skeleton h-12 w-full" />
+          ))}
+        </div>
+      ) : patients.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <EmptyState
+            icon={Users}
+            title={searchTerm ? 'No matching patients' : 'No patients yet'}
+            description={
+              searchTerm
+                ? `Nothing matched "${searchTerm}". Try a different term or search field.`
+                : 'Register your first patient to get started.'
+            }
+            action={canCreate && !searchTerm ? openCreate : undefined}
+            actionLabel="Add Patient"
+          />
+        </div>
+      ) : (
+        <>
+          <Table
+            columns={columns}
+            data={patients}
+            onEdit={canEdit ? openEdit : undefined}
+            onDelete={canDelete ? (row) => setConfirmTarget(row) : undefined}
+          />
+
+          {/* Server-side pager. Table paginates whatever array it is given,
+              so it is handed exactly one page and its own pager stays hidden. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <p className="text-sm text-gray-600">
+              Showing {showingFrom}–{showingTo} of {totalElements}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={ChevronLeft}
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-600 px-2">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
+            )}
+          </div>
+        </>
+      )}
 
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    className="form-control"
-                    value={formData.email}
-                    onChange={handleChange}
-                    maxLength={100}
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Phone *</label>
-                  <input
-                    type="text"
-                    name="phone"
-                    className="form-control"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    required
-                    minLength={10}
-                    maxLength={20}
-                  />
-                </div>
-              </div>
+      {/* Create / edit */}
+      <Modal
+        isOpen={modalOpen}
+        title={editingId ? 'Edit Patient' : 'Register Patient'}
+        onClose={() => !saving && setModalOpen(false)}
+        size="2xl"
+        closeOnBackdrop={!saving}
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <section>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-primary-600 mb-3">
+              Personal Information
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField
+                label="First name"
+                name="firstName"
+                required
+                value={formData.firstName}
+                onChange={handleChange}
+                error={fieldErrors.firstName}
+                touched
+              />
+              <InputField
+                label="Last name"
+                name="lastName"
+                required
+                value={formData.lastName}
+                onChange={handleChange}
+                error={fieldErrors.lastName}
+                touched
+              />
+              <DateField
+                label="Date of birth"
+                name="dateOfBirth"
+                required
+                value={formData.dateOfBirth}
+                onChange={handleChange}
+                error={fieldErrors.dateOfBirth}
+                touched
+              />
+              <SelectField
+                label="Gender"
+                name="gender"
+                required
+                options={GENDERS}
+                placeholder="Select gender"
+                value={formData.gender}
+                onChange={handleChange}
+                error={fieldErrors.gender}
+                touched
+              />
+              <InputField
+                label="Blood group"
+                name="bloodGroup"
+                placeholder="e.g. O+"
+                value={formData.bloodGroup}
+                onChange={handleChange}
+                error={fieldErrors.bloodGroup}
+                touched
+              />
+            </div>
+          </section>
 
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Date of Birth *</label>
-                  <input
-                    type="date"
-                    name="dateOfBirth"
-                    className="form-control"
-                    value={formData.dateOfBirth}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Gender *</label>
-                  <select
-                    name="gender"
-                    className="form-select"
-                    value={formData.gender}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
+          <section className="border-t border-gray-200 pt-5">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-primary-600 mb-3">
+              Contact
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField
+                label="Phone"
+                name="phone"
+                required
+                value={formData.phone}
+                onChange={handleChange}
+                error={fieldErrors.phone}
+                touched
+              />
+              <InputField
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                error={fieldErrors.email}
+                touched
+              />
+            </div>
+          </section>
 
-              <div className="mb-3">
-                <label className="form-label">Address *</label>
-                <input
-                  type="text"
+          <section className="border-t border-gray-200 pt-5">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-primary-600 mb-3">
+              Address
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <InputField
+                  label="Address"
                   name="address"
-                  className="form-control"
+                  required
                   value={formData.address}
                   onChange={handleChange}
-                  required
-                  minLength={5}
-                  maxLength={255}
+                  error={fieldErrors.address}
+                  touched
                 />
               </div>
+              <InputField
+                label="City"
+                name="city"
+                required
+                value={formData.city}
+                onChange={handleChange}
+                error={fieldErrors.city}
+                touched
+              />
+              <InputField
+                label="State"
+                name="state"
+                required
+                value={formData.state}
+                onChange={handleChange}
+                error={fieldErrors.state}
+                touched
+              />
+              <InputField
+                label="Zip code"
+                name="zipCode"
+                required
+                value={formData.zipCode}
+                onChange={handleChange}
+                error={fieldErrors.zipCode}
+                touched
+              />
+            </div>
+          </section>
 
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">City *</label>
-                  <input
-                    type="text"
-                    name="city"
-                    className="form-control"
-                    value={formData.city}
-                    onChange={handleChange}
-                    required
-                    minLength={2}
-                    maxLength={50}
-                  />
-                </div>
-                <div className="col-md-3 mb-3">
-                  <label className="form-label">State *</label>
-                  <input
-                    type="text"
-                    name="state"
-                    className="form-control"
-                    value={formData.state}
-                    onChange={handleChange}
-                    required
-                    minLength={2}
-                    maxLength={50}
-                  />
-                </div>
-                <div className="col-md-3 mb-3">
-                  <label className="form-label">Zip Code *</label>
-                  <input
-                    type="text"
-                    name="zipCode"
-                    className="form-control"
-                    value={formData.zipCode}
-                    onChange={handleChange}
-                    required
-                    minLength={5}
-                    maxLength={10}
-                  />
-                </div>
-              </div>
+          <section className="border-t border-gray-200 pt-5">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-primary-600 mb-3">
+              Emergency Contact
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField
+                label="Contact name"
+                name="emergencyContact"
+                value={formData.emergencyContact}
+                onChange={handleChange}
+                error={fieldErrors.emergencyContact}
+                touched
+              />
+              <InputField
+                label="Contact phone"
+                name="emergencyPhone"
+                value={formData.emergencyPhone}
+                onChange={handleChange}
+                error={fieldErrors.emergencyPhone}
+                touched
+              />
+            </div>
+          </section>
 
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Blood Group</label>
+          <section className="border-t border-gray-200 pt-5">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-primary-600 mb-3">
+              Login Account
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField
+                label="Linked user ID"
+                name="userId"
+                type="number"
+                placeholder="Optional"
+                value={formData.userId}
+                onChange={handleChange}
+                error={fieldErrors.userId}
+                touched
+              />
+              <div className="flex items-end pb-2">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input
-                    type="text"
-                    name="bloodGroup"
-                    className="form-control"
-                    value={formData.bloodGroup}
+                    type="checkbox"
+                    name="isActive"
+                    checked={formData.isActive}
                     onChange={handleChange}
-                    placeholder="e.g., O+, AB-"
-                    maxLength={5}
+                    className="rounded border-gray-300"
                   />
-                </div>
-              </div>
-
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Emergency Contact</label>
-                  <input
-                    type="text"
-                    name="emergencyContact"
-                    className="form-control"
-                    value={formData.emergencyContact}
-                    onChange={handleChange}
-                    maxLength={100}
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Emergency Phone</label>
-                  <input
-                    type="text"
-                    name="emergencyPhone"
-                    className="form-control"
-                    value={formData.emergencyPhone}
-                    onChange={handleChange}
-                    maxLength={20}
-                  />
-                </div>
-              </div>
-
-              <div className="form-check mb-3">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  id="isActive"
-                  className="form-check-input"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                />
-                <label className="form-check-label" htmlFor="isActive">
                   Active
                 </label>
               </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Links this record to a login so the patient can see their own details.
+              {editingId && ' Leave blank to keep the current link.'}
+            </p>
+          </section>
 
-              <div className="gap-2 d-flex">
-                <button type="submit" className="btn btn-primary">
-                  {editingId ? 'Update' : 'Create'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+          <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving}>
+              {editingId ? 'Save changes' : 'Register patient'}
+            </Button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
-      {/* Button to show form */}
-      {!showForm && (
-        <button className="btn btn-success mb-3" onClick={() => setShowForm(true)}>
-          + Add Patient
-        </button>
-      )}
-
-      {/* Patients Table */}
-      {loading ? (
-        <p>Loading patients...</p>
-      ) : patients.length === 0 ? (
-        <p>No patients found. Create one to get started.</p>
-      ) : (
-        <table className="table table-striped table-hover table-sm">
-          <thead className="table-dark">
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>DOB</th>
-              <th>City</th>
-              <th>Blood Group</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {patients.map((patient) => (
-              <tr key={patient.id}>
-                <td>{patient.id}</td>
-                <td>
-                  {patient.firstName} {patient.lastName}
-                </td>
-                <td>{patient.email || '—'}</td>
-                <td>{patient.phone}</td>
-                <td>{patient.dateOfBirth}</td>
-                <td>{patient.city}</td>
-                <td>{patient.bloodGroup || '—'}</td>
-                <td>
-                  <span
-                    className={`badge ${patient.isActive ? 'bg-success' : 'bg-danger'}`}
-                  >
-                    {patient.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="btn btn-sm btn-primary me-2"
-                    onClick={() => handleEdit(patient)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => handleDelete(patient.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <ConfirmDialog
+        isOpen={!!confirmTarget}
+        title="Delete patient"
+        message={
+          confirmTarget
+            ? `Delete ${confirmTarget.firstName} ${confirmTarget.lastName}? The record is deactivated, not permanently removed.`
+            : ''
+        }
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => !deleting && setConfirmTarget(null)}
+      />
     </div>
   );
 }

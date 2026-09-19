@@ -31,12 +31,14 @@ const Modal = ({
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* max-h + column layout so a tall form scrolls its body instead of
+            growing past the viewport and putting the submit button out of reach. */}
         <div
-          className={`${sizes[size]} w-full bg-white rounded-lg shadow-xl animate-fadeIn`}
+          className={`${sizes[size]} w-full bg-white rounded-lg shadow-xl animate-fadeIn flex flex-col max-h-[90vh]`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
             <button
               onClick={onClose}
@@ -47,11 +49,11 @@ const Modal = ({
           </div>
 
           {/* Body */}
-          <div className="p-6">{children}</div>
+          <div className="p-6 overflow-y-auto flex-1">{children}</div>
 
           {/* Footer */}
           {footer && (
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 flex-shrink-0">
               {footer}
             </div>
           )}

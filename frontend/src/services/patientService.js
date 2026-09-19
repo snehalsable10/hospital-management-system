@@ -1,84 +1,80 @@
 import api from './api';
 
+/**
+ * Every call returns the ApiResponse envelope: { message, data, success }.
+ * Paginated calls put a PageResponse in `data`:
+ * { content, pageNumber, pageSize, totalElements, totalPages, ... }
+ */
 const patientService = {
-  // Get all patients
   getAllPatients: async () => {
-    try {
-      const response = await api.get('/patients');
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get('/patients');
+    return response.data;
   },
 
-  // Get a specific patient by ID
+  getAllPatientsPaginated: async (pageNumber = 0, pageSize = 10) => {
+    const response = await api.get('/patients/paginated', {
+      params: { pageNumber, pageSize },
+    });
+    return response.data;
+  },
+
   getPatientById: async (id) => {
-    try {
-      const response = await api.get(`/patients/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/patients/${id}`);
+    return response.data;
   },
 
-  // Search patients by first name
   searchByFirstName: async (firstName) => {
-    try {
-      const response = await api.get(`/patients/search/firstname/${firstName}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/patients/search/firstname/${encodeURIComponent(firstName)}`);
+    return response.data;
   },
 
-  // Search patients by last name
+  searchByFirstNamePaginated: async (firstName, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(
+      `/patients/search/firstname/${encodeURIComponent(firstName)}/paginated`,
+      { params: { pageNumber, pageSize } }
+    );
+    return response.data;
+  },
+
   searchByLastName: async (lastName) => {
-    try {
-      const response = await api.get(`/patients/search/lastname/${lastName}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/patients/search/lastname/${encodeURIComponent(lastName)}`);
+    return response.data;
   },
 
-  // Search patients by city
+  searchByLastNamePaginated: async (lastName, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(
+      `/patients/search/lastname/${encodeURIComponent(lastName)}/paginated`,
+      { params: { pageNumber, pageSize } }
+    );
+    return response.data;
+  },
+
   searchByCity: async (city) => {
-    try {
-      const response = await api.get(`/patients/search/city/${city}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/patients/search/city/${encodeURIComponent(city)}`);
+    return response.data;
   },
 
-  // Create a new patient
+  searchByCityPaginated: async (city, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(
+      `/patients/search/city/${encodeURIComponent(city)}/paginated`,
+      { params: { pageNumber, pageSize } }
+    );
+    return response.data;
+  },
+
   createPatient: async (patientData) => {
-    try {
-      const response = await api.post('/patients', patientData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post('/patients', patientData);
+    return response.data;
   },
 
-  // Update an existing patient
   updatePatient: async (id, patientData) => {
-    try {
-      const response = await api.put(`/patients/${id}`, patientData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.put(`/patients/${id}`, patientData);
+    return response.data;
   },
 
-  // Delete a patient
   deletePatient: async (id) => {
-    try {
-      const response = await api.delete(`/patients/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.delete(`/patients/${id}`);
+    return response.data;
   },
 };
 

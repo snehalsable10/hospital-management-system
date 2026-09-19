@@ -67,7 +67,7 @@ public class PatientService {
      */
     @Cacheable(value = "patients", key = "'searchByFirstName:' + #firstName")
     public List<Patient> searchByFirstName(String firstName) {
-        return patientRepository.findByFirstNameIgnoreCaseContaining(firstName);
+        return patientRepository.findByFirstNameIgnoreCaseContainingAndIsActiveTrue(firstName);
     }
 
     /**
@@ -77,7 +77,7 @@ public class PatientService {
     public PageResponse<Patient> searchByFirstNamePaginated(String firstName, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Patient> page = patientRepository.findByFirstNameIgnoreCaseContaining(firstName, pageable);
+        Page<Patient> page = patientRepository.findByFirstNameIgnoreCaseContainingAndIsActiveTrue(firstName, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -88,7 +88,7 @@ public class PatientService {
      */
     @Cacheable(value = "patients", key = "'searchByLastName:' + #lastName")
     public List<Patient> searchByLastName(String lastName) {
-        return patientRepository.findByLastNameIgnoreCaseContaining(lastName);
+        return patientRepository.findByLastNameIgnoreCaseContainingAndIsActiveTrue(lastName);
     }
 
     /**
@@ -98,7 +98,7 @@ public class PatientService {
     public PageResponse<Patient> searchByLastNamePaginated(String lastName, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Patient> page = patientRepository.findByLastNameIgnoreCaseContaining(lastName, pageable);
+        Page<Patient> page = patientRepository.findByLastNameIgnoreCaseContainingAndIsActiveTrue(lastName, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -109,7 +109,7 @@ public class PatientService {
      */
     @Cacheable(value = "patients", key = "'searchByCity:' + #city")
     public List<Patient> searchByCity(String city) {
-        return patientRepository.findByCity(city);
+        return patientRepository.findByCityAndIsActiveTrue(city);
     }
 
     /**
@@ -119,7 +119,7 @@ public class PatientService {
     public PageResponse<Patient> searchByCityPaginated(String city, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        Page<Patient> page = patientRepository.findByCity(city, pageable);
+        Page<Patient> page = patientRepository.findByCityAndIsActiveTrue(city, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
