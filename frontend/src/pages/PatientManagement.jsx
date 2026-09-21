@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import Table from '../components/common/Table';
 import SearchBar from '../components/common/SearchBar';
@@ -70,7 +70,14 @@ function PatientManagement() {
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Changing the search term or field in quick succession leaves two requests
+  // in flight, and whichever answers last wins - which may be the one for the
+  // term the user already moved off. Each load takes a ticket and drops its
+  // result if a newer load started meanwhile.
+  const requestId = useRef(0);
+
   const loadPatients = useCallback(async () => {
+    const ticket = ++requestId.current;
     setLoading(true);
     try {
       let result;
@@ -84,17 +91,19 @@ function PatientManagement() {
         result = await patientService.searchByCityPaginated(searchTerm, page, PAGE_SIZE);
       }
 
+      if (ticket !== requestId.current) return;
       const pageData = result.data || {};
       setPatients(pageData.content || []);
       setTotalPages(pageData.totalPages || 0);
       setTotalElements(pageData.totalElements || 0);
     } catch (err) {
+      if (ticket !== requestId.current) return;
       notify.error(err.response?.data?.message || 'Could not load patients');
       setPatients([]);
       setTotalPages(0);
       setTotalElements(0);
     } finally {
-      setLoading(false);
+      if (ticket === requestId.current) setLoading(false);
     }
   }, [page, searchTerm, searchField, notify]);
 

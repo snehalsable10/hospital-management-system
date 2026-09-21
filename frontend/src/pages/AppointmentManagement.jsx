@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, Calendar, Clock, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import Table from '../components/common/Table';
 import Modal from '../components/common/Modal';
@@ -122,7 +122,14 @@ function AppointmentManagement() {
   // A date range needs both ends before the API will accept it.
   const rangeActive = Boolean(startDate && endDate);
 
+  // Changing two filters in quick succession leaves two requests in flight,
+  // and whichever answers last wins - which may be the one for the filter the
+  // user already moved off. Each load takes a ticket and drops its result if
+  // a newer load started meanwhile.
+  const requestId = useRef(0);
+
   const loadAppointments = useCallback(async () => {
+    const ticket = ++requestId.current;
     setLoading(true);
     try {
       let result;
@@ -143,17 +150,19 @@ function AppointmentManagement() {
         result = await appointmentService.getAllAppointmentsPaginated(page, PAGE_SIZE);
       }
 
+      if (ticket !== requestId.current) return;
       const pageData = result.data || {};
       setAppointments(pageData.content || []);
       setTotalPages(pageData.totalPages || 0);
       setTotalElements(pageData.totalElements || 0);
     } catch (err) {
+      if (ticket !== requestId.current) return;
       notify.error(err.response?.data?.message || 'Could not load appointments');
       setAppointments([]);
       setTotalPages(0);
       setTotalElements(0);
     } finally {
-      setLoading(false);
+      if (ticket === requestId.current) setLoading(false);
     }
   }, [page, statusFilter, startDate, endDate, rangeActive, notify]);
 

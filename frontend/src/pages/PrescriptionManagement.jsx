@@ -1,434 +1,608 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Plus, FileText, Pill, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Table from '../components/common/Table';
+import Modal from '../components/common/Modal';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import Button from '../components/common/Button';
+import Badge from '../components/common/Badge';
+import EmptyState from '../components/common/EmptyState';
+import InputField from '../components/forms/InputField';
+import SelectField from '../components/forms/SelectField';
+import TextAreaField from '../components/forms/TextAreaField';
+import { useNotification } from '../hooks/useNotification';
+import { useAuth } from '../hooks/useAuth';
 import prescriptionService from '../services/prescriptionService';
 import appointmentService from '../services/appointmentService';
-import patientService from '../services/patientService';
-import doctorService from '../services/doctorService';
+
+const PAGE_SIZE = 10;
+
+// Stored as free text; these are the values the API documents.
+const STATUSES = ['ACTIVE', 'COMPLETED', 'EXPIRED'];
+
+const STATUS_VARIANT = {
+  ACTIVE: 'success',
+  COMPLETED: 'info',
+  EXPIRED: 'gray',
+};
+
+const EMPTY_FORM = {
+  appointmentId: '',
+  patientId: '',
+  doctorId: '',
+  medicineName: '',
+  dosage: '',
+  frequency: '',
+  duration: '',
+  instructions: '',
+  status: 'ACTIVE',
+  isActive: true,
+};
+
+const fullName = (person) =>
+  person ? `${person.firstName || ''} ${person.lastName || ''}`.trim() : '';
+
+const formatDate = (value) => {
+  if (!value) return '';
+  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
 
 function PrescriptionManagement() {
+  const { role } = useAuth();
+  const notify = useNotification();
+
+  // The list endpoint is ADMIN/STAFF, and so is writing. Deleting is stricter:
+  // the controller requires ADMIN.
+  const canManage = role === 'ADMIN' || role === 'STAFF';
+  const canDelete = role === 'ADMIN';
+
   const [prescriptions, setPrescriptions] = useState([]);
   const [appointments, setAppointments] = useState([]);
-  const [patients, setPatients] = useState([]);
-  const [doctors, setDoctors] = useState([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
-  const [showForm, setShowForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [appointmentFilter, setAppointmentFilter] = useState('');
+
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    appointmentId: '',
-    patientId: '',
-    doctorId: '',
-    medicineName: '',
-    dosage: '',
-    frequency: '',
-    duration: '',
-    instructions: '',
-    status: 'ACTIVE',
-    isActive: true,
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
-  // Fetch all data on mount
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // A prescription is written against an appointment, and its patient and
+  // doctor are that appointment's participants - so the appointment list is
+  // the only lookup the form needs.
   useEffect(() => {
-    loadData();
-  }, []);
+    appointmentService
+      .getAllAppointments()
+      .then((result) => setAppointments(result.data || []))
+      .catch(() => notify.error('Could not load appointments'));
+  }, [notify]);
 
-  const loadData = async () => {
+  const appointmentOptions = useMemo(
+    () =>
+      appointments.map((a) => ({
+        value: a.id,
+        label: `#${a.id} · ${fullName(a.patient)} with Dr. ${fullName(a.doctor)} · ${formatDate(
+          a.appointmentDate
+        )}`,
+      })),
+    [appointments]
+  );
+
+  const selectedAppointment = useMemo(
+    () => appointments.find((a) => String(a.id) === String(formData.appointmentId)),
+    [appointments, formData.appointmentId]
+  );
+
+  // Changing two filters in quick succession leaves two requests in flight,
+  // and whichever answers last wins - which may be the one for the filter the
+  // user already moved off. Each load takes a ticket and drops its result if
+  // a newer load started meanwhile.
+  const requestId = useRef(0);
+
+  const loadPrescriptions = useCallback(async () => {
+    const ticket = ++requestId.current;
     setLoading(true);
-    setError('');
-    try {
-      const [prescriptionsResult, appointmentsResult, patientsResult, doctorsResult] = await Promise.all([
-        prescriptionService.getAllPrescriptions(),
-        appointmentService.getAllAppointments(),
-        patientService.getAllPatients(),
-        doctorService.getAllDoctors(),
-      ]);
-
-      if (prescriptionsResult.success) {
-        setPrescriptions(prescriptionsResult.data || []);
-      }
-      if (appointmentsResult.success) {
-        setAppointments(appointmentsResult.data || []);
-      }
-      if (patientsResult.success) {
-        setPatients(patientsResult.data || []);
-      }
-      if (doctorsResult.success) {
-        setDoctors(doctorsResult.data || []);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error loading data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
     try {
       let result;
-      if (editingId) {
-        result = await prescriptionService.updatePrescription(editingId, formData);
+      if (appointmentFilter) {
+        result = await prescriptionService.getPrescriptionsByAppointmentPaginated(
+          appointmentFilter,
+          page,
+          PAGE_SIZE
+        );
+      } else if (statusFilter) {
+        result = await prescriptionService.getPrescriptionsByStatusPaginated(
+          statusFilter,
+          page,
+          PAGE_SIZE
+        );
       } else {
-        result = prescriptionService.createPrescription(formData);
+        result = await prescriptionService.getAllPrescriptionsPaginated(page, PAGE_SIZE);
       }
 
-      if (result.success) {
-        setSuccess(result.message);
-        setShowForm(false);
-        setEditingId(null);
-        setFormData({
-          appointmentId: '',
-          patientId: '',
-          doctorId: '',
-          medicineName: '',
-          dosage: '',
-          frequency: '',
-          duration: '',
-          instructions: '',
-          status: 'ACTIVE',
-          isActive: true,
-        });
-        loadData();
-      } else {
-        setError(result.message);
-      }
+      if (ticket !== requestId.current) return;
+      const pageData = result.data || {};
+      setPrescriptions(pageData.content || []);
+      setTotalPages(pageData.totalPages || 0);
+      setTotalElements(pageData.totalElements || 0);
     } catch (err) {
-      setError(err.response?.data?.message || 'Operation failed');
+      if (ticket !== requestId.current) return;
+      notify.error(err.response?.data?.message || 'Could not load prescriptions');
+      setPrescriptions([]);
+      setTotalPages(0);
+      setTotalElements(0);
+    } finally {
+      if (ticket === requestId.current) setLoading(false);
     }
+  }, [page, statusFilter, appointmentFilter, notify]);
+
+  useEffect(() => {
+    loadPrescriptions();
+  }, [loadPrescriptions]);
+
+  const changeStatusFilter = (value) => {
+    setStatusFilter(value);
+    setPage(0);
   };
 
-  const handleEdit = (prescription) => {
+  const changeAppointmentFilter = (value) => {
+    setAppointmentFilter(value);
+    setPage(0);
+  };
+
+  const clearFilters = () => {
+    setStatusFilter('');
+    setAppointmentFilter('');
+    setPage(0);
+  };
+
+  const openCreate = () => {
+    setEditingId(null);
+    setFormData(EMPTY_FORM);
+    setFieldErrors({});
+    setModalOpen(true);
+  };
+
+  const openEdit = (prescription) => {
     setEditingId(prescription.id);
     setFormData({
       appointmentId: prescription.appointment?.id || '',
       patientId: prescription.patient?.id || '',
       doctorId: prescription.doctor?.id || '',
-      medicineName: prescription.medicineName,
-      dosage: prescription.dosage,
-      frequency: prescription.frequency,
-      duration: prescription.duration,
+      medicineName: prescription.medicineName || '',
+      dosage: prescription.dosage || '',
+      frequency: prescription.frequency || '',
+      duration: prescription.duration || '',
       instructions: prescription.instructions || '',
-      status: prescription.status,
-      isActive: prescription.isActive,
+      status: prescription.status || 'ACTIVE',
+      isActive: prescription.isActive ?? true,
     });
-    setShowForm(true);
+    setFieldErrors({});
+    setModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this prescription?')) {
-      return;
-    }
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
 
-    setError('');
-    setSuccess('');
+  /**
+   * Picking the appointment sets the patient and doctor with it. The API takes
+   * all three ids separately and does not check that they belong together, so
+   * deriving them here is what keeps the triple consistent.
+   */
+  const handleAppointmentChange = (e) => {
+    const appointmentId = e.target.value;
+    const appointment = appointments.find((a) => String(a.id) === String(appointmentId));
+    setFormData((prev) => ({
+      ...prev,
+      appointmentId,
+      patientId: appointment?.patient?.id || '',
+      doctorId: appointment?.doctor?.id || '',
+    }));
+    setFieldErrors((prev) => ({
+      ...prev,
+      appointmentId: undefined,
+      patientId: undefined,
+      doctorId: undefined,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setFieldErrors({});
+
+    const payload = {
+      ...formData,
+      appointmentId: Number(formData.appointmentId),
+      patientId: Number(formData.patientId),
+      doctorId: Number(formData.doctorId),
+      instructions: formData.instructions.trim() || null,
+    };
 
     try {
-      const result = await prescriptionService.deletePrescription(id);
-      if (result.success) {
-        setSuccess(result.message);
-        loadData();
+      const result = editingId
+        ? await prescriptionService.updatePrescription(editingId, payload)
+        : await prescriptionService.createPrescription(payload);
+
+      notify.success(result.message);
+      setModalOpen(false);
+      loadPrescriptions();
+    } catch (err) {
+      const body = err.response?.data;
+      if (body?.data && typeof body.data === 'object') {
+        setFieldErrors(body.data);
+        notify.error(body.message || 'Please correct the highlighted fields');
       } else {
-        setError(result.message);
+        notify.error(body?.message || 'Could not save the prescription');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const result = await prescriptionService.deletePrescription(confirmTarget.id);
+      notify.success(result.message);
+      setConfirmTarget(null);
+      if (prescriptions.length === 1 && page > 0) {
+        setPage(page - 1);
+      } else {
+        loadPrescriptions();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Delete failed');
+      notify.error(err.response?.data?.message || 'Could not delete the prescription');
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const handleCancel = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setFormData({
-      appointmentId: '',
-      patientId: '',
-      doctorId: '',
-      medicineName: '',
-      dosage: '',
-      frequency: '',
-      duration: '',
-      instructions: '',
-      status: 'ACTIVE',
-      isActive: true,
-    });
-    setError('');
-  };
-
-  const getAppointmentDisplay = (appointmentId) => {
-    const apt = appointments.find((a) => a.id === appointmentId);
-    if (apt && apt.patient && apt.doctor) {
-      return `${apt.patient.firstName} ${apt.patient.lastName} - ${apt.doctor.firstName} ${apt.doctor.lastName}`;
-    }
-    return 'Unknown';
-  };
-
-  const getStatusBadge = (status) => {
-    const statusColors = {
-      ACTIVE: 'bg-success',
-      COMPLETED: 'bg-info',
-      DISCONTINUED: 'bg-warning',
-    };
-    return statusColors[status] || 'bg-secondary';
-  };
-
-  return (
-    <div className="container mt-4">
-      <h1 className="mb-4">Prescription Management</h1>
-
-      {error && <div className="alert alert-danger">{error}</div>}
-      {success && <div className="alert alert-success">{success}</div>}
-
-      {/* Add/Edit Form */}
-      {showForm && (
-        <div className="card mb-4 bg-light">
-          <div className="card-body">
-            <h5>{editingId ? 'Edit Prescription' : 'Create New Prescription'}</h5>
-            <form onSubmit={handleSubmit}>
-              <div className="row">
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Appointment *</label>
-                  <select
-                    name="appointmentId"
-                    className="form-select"
-                    value={formData.appointmentId}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select an appointment</option>
-                    {appointments.map((apt) => (
-                      <option key={apt.id} value={apt.id}>
-                        {getAppointmentDisplay(apt.id)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Patient *</label>
-                  <select
-                    name="patientId"
-                    className="form-select"
-                    value={formData.patientId}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select a patient</option>
-                    {patients.map((patient) => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.firstName} {patient.lastName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Doctor *</label>
-                  <select
-                    name="doctorId"
-                    className="form-select"
-                    value={formData.doctorId}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select a doctor</option>
-                    {doctors.map((doctor) => (
-                      <option key={doctor.id} value={doctor.id}>
-                        {doctor.firstName} {doctor.lastName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Medicine Name *</label>
-                  <input
-                    type="text"
-                    name="medicineName"
-                    className="form-control"
-                    value={formData.medicineName}
-                    onChange={handleChange}
-                    required
-                    minLength={2}
-                    maxLength={100}
-                    placeholder="e.g., Amoxicillin"
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Dosage *</label>
-                  <input
-                    type="text"
-                    name="dosage"
-                    className="form-control"
-                    value={formData.dosage}
-                    onChange={handleChange}
-                    required
-                    minLength={2}
-                    maxLength={50}
-                    placeholder="e.g., 500mg, 2 tablets"
-                  />
-                </div>
-              </div>
-
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Frequency *</label>
-                  <input
-                    type="text"
-                    name="frequency"
-                    className="form-control"
-                    value={formData.frequency}
-                    onChange={handleChange}
-                    required
-                    minLength={3}
-                    maxLength={50}
-                    placeholder="e.g., Twice daily"
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Duration *</label>
-                  <input
-                    type="text"
-                    name="duration"
-                    className="form-control"
-                    value={formData.duration}
-                    onChange={handleChange}
-                    required
-                    minLength={2}
-                    maxLength={50}
-                    placeholder="e.g., 7 days"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">Instructions</label>
-                <input
-                  type="text"
-                  name="instructions"
-                  className="form-control"
-                  value={formData.instructions}
-                  onChange={handleChange}
-                  maxLength={255}
-                  placeholder="e.g., Take with food"
-                />
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">Status *</label>
-                <select
-                  name="status"
-                  className="form-select"
-                  value={formData.status}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="ACTIVE">Active</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="DISCONTINUED">Discontinued</option>
-                </select>
-              </div>
-
-              <div className="form-check mb-3">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  id="isActive"
-                  className="form-check-input"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                />
-                <label className="form-check-label" htmlFor="isActive">
-                  Active
-                </label>
-              </div>
-
-              <div className="gap-2 d-flex">
-                <button type="submit" className="btn btn-primary">
-                  {editingId ? 'Update' : 'Create'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+  const columns = [
+    {
+      key: 'medicineName',
+      label: 'Medicine',
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center flex-shrink-0">
+            <Pill className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="font-medium text-gray-900">{value}</p>
+            <p className="text-xs text-gray-500">
+              {row.dosage} · {row.frequency}
+            </p>
           </div>
         </div>
-      )}
+      ),
+    },
+    {
+      key: 'patient',
+      label: 'Patient',
+      render: (patient) => (
+        <span className="text-gray-900">{fullName(patient) || '—'}</span>
+      ),
+    },
+    {
+      key: 'doctor',
+      label: 'Prescribed by',
+      render: (doctor) => (
+        <span className="text-gray-900">{doctor ? `Dr. ${fullName(doctor)}` : '—'}</span>
+      ),
+    },
+    {
+      key: 'duration',
+      label: 'Duration',
+      render: (value) => <span className="text-gray-600">{value || '—'}</span>,
+    },
+    {
+      key: 'appointment',
+      label: 'Appointment',
+      render: (appointment) =>
+        appointment ? (
+          <span className="text-gray-600">
+            #{appointment.id} · {formatDate(appointment.appointmentDate)}
+          </span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value) => (
+        <Badge variant={STATUS_VARIANT[value] || 'gray'} size="sm">
+          {value || 'UNKNOWN'}
+        </Badge>
+      ),
+    },
+  ];
 
-      {/* Button to show form */}
-      {!showForm && (
-        <button className="btn btn-success mb-3" onClick={() => setShowForm(true)}>
-          + Add Prescription
-        </button>
-      )}
+  const showingFrom = totalElements === 0 ? 0 : page * PAGE_SIZE + 1;
+  const showingTo = Math.min((page + 1) * PAGE_SIZE, totalElements);
+  const filtersApplied = Boolean(statusFilter || appointmentFilter);
 
-      {/* Prescriptions Table */}
+  return (
+    <div className="p-6 space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Prescriptions</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Medicines written against an appointment.
+          </p>
+        </div>
+        {canManage && (
+          <Button onClick={openCreate} icon={Plus}>
+            Write Prescription
+          </Button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SelectField
+            label="Status"
+            placeholder="Any status"
+            value={statusFilter}
+            disabled={Boolean(appointmentFilter)}
+            onChange={(e) => changeStatusFilter(e.target.value)}
+            options={STATUSES.map((s) => ({ value: s, label: s }))}
+          />
+          <SelectField
+            label="Appointment"
+            placeholder="Any appointment"
+            value={appointmentFilter}
+            onChange={(e) => changeAppointmentFilter(e.target.value)}
+            options={appointmentOptions}
+          />
+          <div className="flex items-end">
+            {filtersApplied && (
+              <Button variant="outline" icon={X} onClick={clearFilters}>
+                Clear filters
+              </Button>
+            )}
+          </div>
+        </div>
+        {appointmentFilter && (
+          <p className="text-xs text-gray-500 mt-3">
+            Showing one appointment. The status filter is ignored, because the API filters
+            on one or the other.
+          </p>
+        )}
+      </div>
+
       {loading ? (
-        <p>Loading prescriptions...</p>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="skeleton h-12 w-full" />
+          ))}
+        </div>
       ) : prescriptions.length === 0 ? (
-        <p>No prescriptions found. Create one to get started.</p>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <EmptyState
+            icon={FileText}
+            title={
+              filtersApplied ? 'No prescriptions match these filters' : 'No prescriptions yet'
+            }
+            description={
+              filtersApplied
+                ? 'Try a different status or appointment.'
+                : 'Write the first prescription against an appointment.'
+            }
+            action={filtersApplied ? clearFilters : canManage ? openCreate : undefined}
+            actionLabel={filtersApplied ? 'Clear filters' : 'Write Prescription'}
+          />
+        </div>
       ) : (
-        <table className="table table-striped table-hover table-sm">
-          <thead className="table-dark">
-            <tr>
-              <th>ID</th>
-              <th>Appointment</th>
-              <th>Medicine</th>
-              <th>Dosage</th>
-              <th>Frequency</th>
-              <th>Duration</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {prescriptions.map((prescription) => (
-              <tr key={prescription.id}>
-                <td>{prescription.id}</td>
-                <td>{getAppointmentDisplay(prescription.appointment?.id)}</td>
-                <td>{prescription.medicineName}</td>
-                <td>{prescription.dosage}</td>
-                <td>{prescription.frequency}</td>
-                <td>{prescription.duration}</td>
-                <td>
-                  <span className={`badge ${getStatusBadge(prescription.status)}`}>
-                    {prescription.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="btn btn-sm btn-primary me-2"
-                    onClick={() => handleEdit(prescription)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => handleDelete(prescription.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <Table
+            columns={columns}
+            data={prescriptions}
+            onEdit={canManage ? openEdit : undefined}
+            onDelete={canDelete ? (row) => setConfirmTarget(row) : undefined}
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <p className="text-sm text-gray-600">
+              Showing {showingFrom}–{showingTo} of {totalElements}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={ChevronLeft}
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-600 px-2">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </>
       )}
+
+      <Modal
+        isOpen={modalOpen}
+        title={editingId ? 'Edit Prescription' : 'Write Prescription'}
+        onClose={() => !saving && setModalOpen(false)}
+        size="2xl"
+        closeOnBackdrop={!saving}
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <SelectField
+            label="Appointment"
+            name="appointmentId"
+            required
+            placeholder="Select an appointment"
+            value={formData.appointmentId}
+            onChange={handleAppointmentChange}
+            options={appointmentOptions}
+            error={fieldErrors.appointmentId}
+            touched
+          />
+
+          {selectedAppointment && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg bg-gray-50 border border-gray-200 p-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Patient
+                </p>
+                <p className="text-sm text-gray-900 mt-1">
+                  {fullName(selectedAppointment.patient)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Prescribing doctor
+                </p>
+                <p className="text-sm text-gray-900 mt-1">
+                  Dr. {fullName(selectedAppointment.doctor)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(fieldErrors.patientId || fieldErrors.doctorId) && (
+            <p className="text-sm text-danger-600">
+              {fieldErrors.patientId || fieldErrors.doctorId}
+            </p>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <InputField
+              label="Medicine"
+              name="medicineName"
+              required
+              placeholder="e.g. Atorvastatin"
+              value={formData.medicineName}
+              onChange={handleChange}
+              error={fieldErrors.medicineName}
+              touched
+            />
+            <InputField
+              label="Dosage"
+              name="dosage"
+              required
+              placeholder="e.g. 10 mg"
+              value={formData.dosage}
+              onChange={handleChange}
+              error={fieldErrors.dosage}
+              touched
+            />
+            <InputField
+              label="Frequency"
+              name="frequency"
+              required
+              placeholder="e.g. Once daily"
+              value={formData.frequency}
+              onChange={handleChange}
+              error={fieldErrors.frequency}
+              touched
+            />
+            <InputField
+              label="Duration"
+              name="duration"
+              required
+              placeholder="e.g. 30 days"
+              value={formData.duration}
+              onChange={handleChange}
+              error={fieldErrors.duration}
+              touched
+            />
+          </div>
+
+          <TextAreaField
+            label="Instructions"
+            name="instructions"
+            rows={3}
+            placeholder="e.g. Take after the evening meal"
+            value={formData.instructions}
+            onChange={handleChange}
+            error={fieldErrors.instructions}
+            touched
+          />
+
+          <SelectField
+            label="Status"
+            name="status"
+            required
+            placeholder="Select a status"
+            value={formData.status}
+            onChange={handleChange}
+            options={STATUSES.map((s) => ({ value: s, label: s }))}
+            error={fieldErrors.status}
+            touched
+          />
+
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              name="isActive"
+              checked={formData.isActive}
+              onChange={handleChange}
+              className="rounded border-gray-300"
+            />
+            Active
+          </label>
+
+          <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving}>
+              {editingId ? 'Save changes' : 'Write prescription'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={!!confirmTarget}
+        title="Delete prescription"
+        message={
+          confirmTarget
+            ? `Delete ${confirmTarget.medicineName} for ${
+                fullName(confirmTarget.patient) || 'this patient'
+              }? The record is deactivated, not permanently removed.`
+            : ''
+        }
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => !deleting && setConfirmTarget(null)}
+      />
     </div>
   );
 }

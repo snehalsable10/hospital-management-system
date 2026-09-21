@@ -1,94 +1,96 @@
 import api from './api';
 
+/**
+ * Prescriptions hang off an appointment and carry the patient and doctor of
+ * that appointment. They can be listed in full or narrowed by appointment,
+ * patient, doctor or status. Paginated calls put a PageResponse in `data`:
+ *   { content, pageNumber, pageSize, totalElements, totalPages }
+ */
 const prescriptionService = {
-  // Get all prescriptions
   getAllPrescriptions: async () => {
-    try {
-      const response = await api.get('/prescriptions');
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get('/prescriptions');
+    return response.data;
   },
 
-  // Get a specific prescription by ID
+  getAllPrescriptionsPaginated: async (pageNumber = 0, pageSize = 10) => {
+    const response = await api.get('/prescriptions/paginated', {
+      params: { pageNumber, pageSize },
+    });
+    return response.data;
+  },
+
   getPrescriptionById: async (id) => {
-    try {
-      const response = await api.get(`/prescriptions/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/prescriptions/${id}`);
+    return response.data;
   },
 
-  // Get all prescriptions for an appointment
   getPrescriptionsByAppointment: async (appointmentId) => {
-    try {
-      const response = await api.get(`/prescriptions/appointment/${appointmentId}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/prescriptions/appointment/${appointmentId}`);
+    return response.data;
   },
 
-  // Get all prescriptions for a patient
+  getPrescriptionsByAppointmentPaginated: async (
+    appointmentId,
+    pageNumber = 0,
+    pageSize = 10
+  ) => {
+    const response = await api.get(
+      `/prescriptions/appointment/${appointmentId}/paginated`,
+      { params: { pageNumber, pageSize } }
+    );
+    return response.data;
+  },
+
   getPrescriptionsByPatient: async (patientId) => {
-    try {
-      const response = await api.get(`/prescriptions/patient/${patientId}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/prescriptions/patient/${patientId}`);
+    return response.data;
   },
 
-  // Get all prescriptions written by a doctor
+  getPrescriptionsByPatientPaginated: async (patientId, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(`/prescriptions/patient/${patientId}/paginated`, {
+      params: { pageNumber, pageSize },
+    });
+    return response.data;
+  },
+
   getPrescriptionsByDoctor: async (doctorId) => {
-    try {
-      const response = await api.get(`/prescriptions/doctor/${doctorId}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/prescriptions/doctor/${doctorId}`);
+    return response.data;
   },
 
-  // Get prescriptions by status
+  getPrescriptionsByDoctorPaginated: async (doctorId, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(`/prescriptions/doctor/${doctorId}/paginated`, {
+      params: { pageNumber, pageSize },
+    });
+    return response.data;
+  },
+
   getPrescriptionsByStatus: async (status) => {
-    try {
-      const response = await api.get(`/prescriptions/status/${status}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/prescriptions/status/${encodeURIComponent(status)}`);
+    return response.data;
   },
 
-  // Create a new prescription
+  getPrescriptionsByStatusPaginated: async (status, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(
+      `/prescriptions/status/${encodeURIComponent(status)}/paginated`,
+      { params: { pageNumber, pageSize } }
+    );
+    return response.data;
+  },
+
   createPrescription: async (prescriptionData) => {
-    try {
-      const response = await api.post('/prescriptions', prescriptionData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post('/prescriptions', prescriptionData);
+    return response.data;
   },
 
-  // Update an existing prescription
   updatePrescription: async (id, prescriptionData) => {
-    try {
-      const response = await api.put(`/prescriptions/${id}`, prescriptionData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.put(`/prescriptions/${id}`, prescriptionData);
+    return response.data;
   },
 
-  // Delete a prescription
   deletePrescription: async (id) => {
-    try {
-      const response = await api.delete(`/prescriptions/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.delete(`/prescriptions/${id}`);
+    return response.data;
   },
 };
 

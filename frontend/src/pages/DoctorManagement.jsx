@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, UserCog, ChevronLeft, ChevronRight } from 'lucide-react';
 import Table from '../components/common/Table';
 import SearchBar from '../components/common/SearchBar';
@@ -63,7 +63,14 @@ function DoctorManagement() {
       .catch(() => notify.error('Could not load departments'));
   }, [notify]);
 
+  // Changing the department and specialisation filters in quick succession
+  // leaves two requests in flight, and whichever answers last wins - which may
+  // be the one for the filter the user already moved off. Each load takes a
+  // ticket and drops its result if a newer load started meanwhile.
+  const requestId = useRef(0);
+
   const loadDoctors = useCallback(async () => {
+    const ticket = ++requestId.current;
     setLoading(true);
     try {
       let result;
@@ -83,17 +90,19 @@ function DoctorManagement() {
         result = await doctorService.getAllDoctorsPaginated(page, PAGE_SIZE);
       }
 
+      if (ticket !== requestId.current) return;
       const pageData = result.data || {};
       setDoctors(pageData.content || []);
       setTotalPages(pageData.totalPages || 0);
       setTotalElements(pageData.totalElements || 0);
     } catch (err) {
+      if (ticket !== requestId.current) return;
       notify.error(err.response?.data?.message || 'Could not load doctors');
       setDoctors([]);
       setTotalPages(0);
       setTotalElements(0);
     } finally {
-      setLoading(false);
+      if (ticket === requestId.current) setLoading(false);
     }
   }, [page, specialization, departmentFilter, notify]);
 
