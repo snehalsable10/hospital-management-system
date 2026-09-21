@@ -11,19 +11,19 @@ import java.util.List;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
-    List<Appointment> findByPatientId(Long patientId);
-    List<Appointment> findByDoctorId(Long doctorId);
-    List<Appointment> findByStatus(String status);
-    List<Appointment> findByAppointmentDate(LocalDate appointmentDate);
-    List<Appointment> findByAppointmentDateBetween(LocalDate startDate, LocalDate endDate);
-    List<Appointment> findByPatientIdAndStatus(Long patientId, String status);
-    List<Appointment> findByDoctorIdAndStatus(Long doctorId, String status);
+    List<Appointment> findByPatientIdAndIsActiveTrue(Long patientId);
+    List<Appointment> findByDoctorIdAndIsActiveTrue(Long doctorId);
+    List<Appointment> findByStatusAndIsActiveTrue(String status);
+    List<Appointment> findByAppointmentDateAndIsActiveTrue(LocalDate appointmentDate);
+    List<Appointment> findByAppointmentDateBetweenAndIsActiveTrue(LocalDate startDate, LocalDate endDate);
+    List<Appointment> findByPatientIdAndStatusAndIsActiveTrue(Long patientId, String status);
+    List<Appointment> findByDoctorIdAndStatusAndIsActiveTrue(Long doctorId, String status);
 
     // Paginated methods for performance optimization
-    Page<Appointment> findByPatientId(Long patientId, Pageable pageable);
-    Page<Appointment> findByDoctorId(Long doctorId, Pageable pageable);
-    Page<Appointment> findByStatus(String status, Pageable pageable);
-    Page<Appointment> findByAppointmentDateBetween(LocalDate startDate, LocalDate endDate, Pageable pageable);
+    Page<Appointment> findByPatientIdAndIsActiveTrue(Long patientId, Pageable pageable);
+    Page<Appointment> findByDoctorIdAndIsActiveTrue(Long doctorId, Pageable pageable);
+    Page<Appointment> findByStatusAndIsActiveTrue(String status, Pageable pageable);
+    Page<Appointment> findByAppointmentDateBetweenAndIsActiveTrue(LocalDate startDate, LocalDate endDate, Pageable pageable);
 
     // Soft delete: lists must not show records flagged inactive
     List<Appointment> findByIsActiveTrue();

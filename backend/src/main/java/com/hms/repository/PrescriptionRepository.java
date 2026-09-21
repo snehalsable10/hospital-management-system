@@ -10,18 +10,18 @@ import java.util.List;
 
 @Repository
 public interface PrescriptionRepository extends JpaRepository<Prescription, Long> {
-    List<Prescription> findByAppointmentId(Long appointmentId);
-    List<Prescription> findByPatientId(Long patientId);
-    List<Prescription> findByDoctorId(Long doctorId);
-    List<Prescription> findByStatus(String status);
-    List<Prescription> findByPatientIdAndStatus(Long patientId, String status);
-    List<Prescription> findByDoctorIdAndStatus(Long doctorId, String status);
+    List<Prescription> findByAppointmentIdAndIsActiveTrue(Long appointmentId);
+    List<Prescription> findByPatientIdAndIsActiveTrue(Long patientId);
+    List<Prescription> findByDoctorIdAndIsActiveTrue(Long doctorId);
+    List<Prescription> findByStatusAndIsActiveTrue(String status);
+    List<Prescription> findByPatientIdAndStatusAndIsActiveTrue(Long patientId, String status);
+    List<Prescription> findByDoctorIdAndStatusAndIsActiveTrue(Long doctorId, String status);
 
     // Paginated methods for performance optimization
-    Page<Prescription> findByAppointmentId(Long appointmentId, Pageable pageable);
-    Page<Prescription> findByPatientId(Long patientId, Pageable pageable);
-    Page<Prescription> findByDoctorId(Long doctorId, Pageable pageable);
-    Page<Prescription> findByStatus(String status, Pageable pageable);
+    Page<Prescription> findByAppointmentIdAndIsActiveTrue(Long appointmentId, Pageable pageable);
+    Page<Prescription> findByPatientIdAndIsActiveTrue(Long patientId, Pageable pageable);
+    Page<Prescription> findByDoctorIdAndIsActiveTrue(Long doctorId, Pageable pageable);
+    Page<Prescription> findByStatusAndIsActiveTrue(String status, Pageable pageable);
 
     // Soft delete: lists must not show records flagged inactive
     List<Prescription> findByIsActiveTrue();

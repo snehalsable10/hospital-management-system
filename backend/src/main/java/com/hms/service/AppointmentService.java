@@ -54,7 +54,7 @@ public class AppointmentService {
      */
     @Cacheable(value = "appointments", key = "'getAppointmentsByPatient:' + #patientId")
     public List<Appointment> getAppointmentsByPatient(Long patientId) {
-        return appointmentRepository.findByPatientId(patientId);
+        return appointmentRepository.findByPatientIdAndIsActiveTrue(patientId);
     }
 
     /**
@@ -63,7 +63,7 @@ public class AppointmentService {
      */
     @Cacheable(value = "appointments", key = "'getAppointmentsByDoctor:' + #doctorId")
     public List<Appointment> getAppointmentsByDoctor(Long doctorId) {
-        return appointmentRepository.findByDoctorId(doctorId);
+        return appointmentRepository.findByDoctorIdAndIsActiveTrue(doctorId);
     }
 
     /**
@@ -72,7 +72,7 @@ public class AppointmentService {
      */
     @Cacheable(value = "appointments", key = "'getAppointmentsByStatus:' + #status")
     public List<Appointment> getAppointmentsByStatus(String status) {
-        return appointmentRepository.findByStatus(status);
+        return appointmentRepository.findByStatusAndIsActiveTrue(status);
     }
 
     /**
@@ -81,7 +81,7 @@ public class AppointmentService {
      */
     @Cacheable(value = "appointments", key = "'getAppointmentsByDateRange:' + #startDate + ':' + #endDate")
     public List<Appointment> getAppointmentsByDateRange(LocalDate startDate, LocalDate endDate) {
-        return appointmentRepository.findByAppointmentDateBetween(startDate, endDate);
+        return appointmentRepository.findByAppointmentDateBetweenAndIsActiveTrue(startDate, endDate);
     }
 
     /**
@@ -184,7 +184,7 @@ public class AppointmentService {
     public PageResponse<Appointment> getAppointmentsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Appointment> page = appointmentRepository.findByPatientId(patientId, pageable);
+        Page<Appointment> page = appointmentRepository.findByPatientIdAndIsActiveTrue(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -194,7 +194,7 @@ public class AppointmentService {
     public PageResponse<Appointment> getAppointmentsByDoctorPaginated(Long doctorId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Appointment> page = appointmentRepository.findByDoctorId(doctorId, pageable);
+        Page<Appointment> page = appointmentRepository.findByDoctorIdAndIsActiveTrue(doctorId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -204,7 +204,7 @@ public class AppointmentService {
     public PageResponse<Appointment> getAppointmentsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Appointment> page = appointmentRepository.findByStatus(status, pageable);
+        Page<Appointment> page = appointmentRepository.findByStatusAndIsActiveTrue(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -214,7 +214,7 @@ public class AppointmentService {
     public PageResponse<Appointment> getAppointmentsByDateRangePaginated(LocalDate startDate, LocalDate endDate, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Appointment> page = appointmentRepository.findByAppointmentDateBetween(startDate, endDate, pageable);
+        Page<Appointment> page = appointmentRepository.findByAppointmentDateBetweenAndIsActiveTrue(startDate, endDate, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 }

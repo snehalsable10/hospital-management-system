@@ -56,7 +56,7 @@ public class PrescriptionService {
      */
     @Cacheable(value = "prescriptions", key = "'getPrescriptionsByAppointment:' + #appointmentId")
     public List<Prescription> getPrescriptionsByAppointment(Long appointmentId) {
-        return prescriptionRepository.findByAppointmentId(appointmentId);
+        return prescriptionRepository.findByAppointmentIdAndIsActiveTrue(appointmentId);
     }
 
     /**
@@ -65,7 +65,7 @@ public class PrescriptionService {
      */
     @Cacheable(value = "prescriptions", key = "'getPrescriptionsByPatient:' + #patientId")
     public List<Prescription> getPrescriptionsByPatient(Long patientId) {
-        return prescriptionRepository.findByPatientId(patientId);
+        return prescriptionRepository.findByPatientIdAndIsActiveTrue(patientId);
     }
 
     /**
@@ -74,7 +74,7 @@ public class PrescriptionService {
      */
     @Cacheable(value = "prescriptions", key = "'getPrescriptionsByDoctor:' + #doctorId")
     public List<Prescription> getPrescriptionsByDoctor(Long doctorId) {
-        return prescriptionRepository.findByDoctorId(doctorId);
+        return prescriptionRepository.findByDoctorIdAndIsActiveTrue(doctorId);
     }
 
     /**
@@ -83,7 +83,7 @@ public class PrescriptionService {
      */
     @Cacheable(value = "prescriptions", key = "'getPrescriptionsByStatus:' + #status")
     public List<Prescription> getPrescriptionsByStatus(String status) {
-        return prescriptionRepository.findByStatus(status);
+        return prescriptionRepository.findByStatusAndIsActiveTrue(status);
     }
 
     /**
@@ -198,7 +198,7 @@ public class PrescriptionService {
     public PageResponse<Prescription> getPrescriptionsByAppointmentPaginated(Long appointmentId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Prescription> page = prescriptionRepository.findByAppointmentId(appointmentId, pageable);
+        Page<Prescription> page = prescriptionRepository.findByAppointmentIdAndIsActiveTrue(appointmentId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -208,7 +208,7 @@ public class PrescriptionService {
     public PageResponse<Prescription> getPrescriptionsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Prescription> page = prescriptionRepository.findByPatientId(patientId, pageable);
+        Page<Prescription> page = prescriptionRepository.findByPatientIdAndIsActiveTrue(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -218,7 +218,7 @@ public class PrescriptionService {
     public PageResponse<Prescription> getPrescriptionsByDoctorPaginated(Long doctorId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Prescription> page = prescriptionRepository.findByDoctorId(doctorId, pageable);
+        Page<Prescription> page = prescriptionRepository.findByDoctorIdAndIsActiveTrue(doctorId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -228,7 +228,7 @@ public class PrescriptionService {
     public PageResponse<Prescription> getPrescriptionsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Prescription> page = prescriptionRepository.findByStatus(status, pageable);
+        Page<Prescription> page = prescriptionRepository.findByStatusAndIsActiveTrue(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 }

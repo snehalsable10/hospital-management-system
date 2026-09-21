@@ -48,7 +48,7 @@ public class RoomService {
      */
     @Cacheable(value = "rooms", key = "'getRoomsByType:' + #roomType")
     public List<Room> getRoomsByType(String roomType) {
-        return roomRepository.findByRoomType(roomType);
+        return roomRepository.findByRoomTypeAndIsActiveTrue(roomType);
     }
 
     /**
@@ -57,7 +57,7 @@ public class RoomService {
      */
     @Cacheable(value = "rooms", key = "'getRoomsByWard:' + #ward")
     public List<Room> getRoomsByWard(String ward) {
-        return roomRepository.findByWard(ward);
+        return roomRepository.findByWardAndIsActiveTrue(ward);
     }
 
     /**
@@ -66,7 +66,7 @@ public class RoomService {
      */
     @Cacheable(value = "rooms", key = "'getRoomsByStatus:' + #status")
     public List<Room> getRoomsByStatus(String status) {
-        return roomRepository.findByStatus(status);
+        return roomRepository.findByStatusAndIsActiveTrue(status);
     }
 
     /**
@@ -75,7 +75,7 @@ public class RoomService {
      */
     @Cacheable(value = "rooms", key = "'getAvailableRooms'")
     public List<Room> getAvailableRooms() {
-        return roomRepository.findByStatus("AVAILABLE");
+        return roomRepository.findByStatusAndIsActiveTrue("AVAILABLE");
     }
 
     /**
@@ -84,7 +84,7 @@ public class RoomService {
      */
     @Cacheable(value = "rooms", key = "'getAvailableRoomsByType:' + #roomType")
     public List<Room> getAvailableRoomsByType(String roomType) {
-        return roomRepository.findByRoomTypeAndStatus(roomType, "AVAILABLE");
+        return roomRepository.findByRoomTypeAndStatusAndIsActiveTrue(roomType, "AVAILABLE");
     }
 
     /**
@@ -93,7 +93,7 @@ public class RoomService {
      */
     @Cacheable(value = "rooms", key = "'getAvailableRoomsByWard:' + #ward")
     public List<Room> getAvailableRoomsByWard(String ward) {
-        return roomRepository.findByWardAndStatus(ward, "AVAILABLE");
+        return roomRepository.findByWardAndStatusAndIsActiveTrue(ward, "AVAILABLE");
     }
 
     /**
@@ -227,7 +227,7 @@ public class RoomService {
     public PageResponse<Room> getRoomsByTypePaginated(String roomType, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Room> page = roomRepository.findByRoomType(roomType, pageable);
+        Page<Room> page = roomRepository.findByRoomTypeAndIsActiveTrue(roomType, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -237,7 +237,7 @@ public class RoomService {
     public PageResponse<Room> getRoomsByWardPaginated(String ward, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Room> page = roomRepository.findByWard(ward, pageable);
+        Page<Room> page = roomRepository.findByWardAndIsActiveTrue(ward, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -247,7 +247,7 @@ public class RoomService {
     public PageResponse<Room> getRoomsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Room> page = roomRepository.findByStatus(status, pageable);
+        Page<Room> page = roomRepository.findByStatusAndIsActiveTrue(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -257,7 +257,7 @@ public class RoomService {
     public PageResponse<Room> getAvailableRoomsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Room> page = roomRepository.findByStatus("AVAILABLE", pageable);
+        Page<Room> page = roomRepository.findByStatusAndIsActiveTrue("AVAILABLE", pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -267,7 +267,7 @@ public class RoomService {
     public PageResponse<Room> getAvailableRoomsByTypePaginated(String roomType, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Room> page = roomRepository.findByRoomTypeAndStatus(roomType, "AVAILABLE", pageable);
+        Page<Room> page = roomRepository.findByRoomTypeAndStatusAndIsActiveTrue(roomType, "AVAILABLE", pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -277,7 +277,7 @@ public class RoomService {
     public PageResponse<Room> getAvailableRoomsByWardPaginated(String ward, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Room> page = roomRepository.findByWardAndStatus(ward, "AVAILABLE", pageable);
+        Page<Room> page = roomRepository.findByWardAndStatusAndIsActiveTrue(ward, "AVAILABLE", pageable);
         return PaginationUtil.toPageResponse(page);
     }
 }

@@ -19,8 +19,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -59,7 +62,7 @@ public class BillService {
         if (!patientRepository.existsById(patientId)) {
             throw new ResourceNotFoundException("Patient not found with id: " + patientId);
         }
-        return billRepository.findByPatientId(patientId);
+        return billRepository.findByPatientIdAndIsActiveTrue(patientId);
     }
 
     /**
@@ -73,7 +76,7 @@ public class BillService {
         if (!doctorRepository.existsById(doctorId)) {
             throw new ResourceNotFoundException("Doctor not found with id: " + doctorId);
         }
-        return billRepository.findByDoctorId(doctorId);
+        return billRepository.findByDoctorIdAndIsActiveTrue(doctorId);
     }
 
     /**
@@ -82,7 +85,7 @@ public class BillService {
      */
     @Cacheable(value = "bills", key = "'getBillsByStatus:' + #status")
     public List<Bill> getBillsByStatus(String status) {
-        return billRepository.findByStatus(status);
+        return billRepository.findByStatusAndIsActiveTrue(status);
     }
 
     /**
@@ -91,7 +94,7 @@ public class BillService {
      */
     @Cacheable(value = "bills", key = "'getBillsByDateRange:' + #startDate + ':' + #endDate")
     public List<Bill> getBillsByDateRange(LocalDate startDate, LocalDate endDate) {
-        return billRepository.findByBillDateBetween(startDate, endDate);
+        return billRepository.findByBillDateBetweenAndIsActiveTrue(startDate, endDate);
     }
 
     /**
@@ -105,7 +108,7 @@ public class BillService {
         if (!patientRepository.existsById(patientId)) {
             throw new ResourceNotFoundException("Patient not found with id: " + patientId);
         }
-        return billRepository.findByPatientIdAndStatus(patientId, "UNPAID");
+        return billRepository.findByPatientIdAndStatusAndIsActiveTrue(patientId, "UNPAID");
     }
 
     /**
@@ -119,7 +122,7 @@ public class BillService {
         if (!doctorRepository.existsById(doctorId)) {
             throw new ResourceNotFoundException("Doctor not found with id: " + doctorId);
         }
-        return billRepository.findByDoctorIdAndStatus(doctorId, "PAID");
+        return billRepository.findByDoctorIdAndStatusAndIsActiveTrue(doctorId, "PAID");
     }
 
     /**
@@ -130,6 +133,8 @@ public class BillService {
      */
     @CacheEvict(value = {"bills", "bill"}, allEntries = true)
     public ApiResponse createBill(BillRequest request) {
+        verifyTotalMatchesParts(request);
+
         Patient patient = patientRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Patient not found with id: " + request.getPatientId()));
@@ -166,6 +171,8 @@ public class BillService {
      */
     @CacheEvict(value = {"bills", "bill"}, allEntries = true)
     public ApiResponse updateBill(Long id, BillRequest request) {
+        verifyTotalMatchesParts(request);
+
         Bill bill = billRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bill not found with id: " + id));
 
@@ -227,7 +234,7 @@ public class BillService {
     public PageResponse<Bill> getBillsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Bill> page = billRepository.findByPatientId(patientId, pageable);
+        Page<Bill> page = billRepository.findByPatientIdAndIsActiveTrue(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -237,7 +244,7 @@ public class BillService {
     public PageResponse<Bill> getBillsByDoctorPaginated(Long doctorId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Bill> page = billRepository.findByDoctorId(doctorId, pageable);
+        Page<Bill> page = billRepository.findByDoctorIdAndIsActiveTrue(doctorId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -247,7 +254,7 @@ public class BillService {
     public PageResponse<Bill> getBillsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Bill> page = billRepository.findByStatus(status, pageable);
+        Page<Bill> page = billRepository.findByStatusAndIsActiveTrue(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -257,7 +264,7 @@ public class BillService {
     public PageResponse<Bill> getBillsByDateRangePaginated(LocalDate startDate, LocalDate endDate, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Bill> page = billRepository.findByBillDateBetween(startDate, endDate, pageable);
+        Page<Bill> page = billRepository.findByBillDateBetweenAndIsActiveTrue(startDate, endDate, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -267,7 +274,32 @@ public class BillService {
     public PageResponse<Bill> getPatientUnpaidBillsPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Bill> page = billRepository.findByPatientIdAndStatus(patientId, "UNPAID", pageable);
+        Page<Bill> page = billRepository.findByPatientIdAndStatusAndIsActiveTrue(patientId, "UNPAID", pageable);
         return PaginationUtil.toPageResponse(page);
     }
+
+    /**
+     * A bill's total has to be the sum of its parts.
+     *
+     * The request carries the four fee columns and the total separately, and
+     * nothing tied them together - a caller could send fees of 150 and a total
+     * of 99999 and it would be stored and later summed into the revenue
+     * figures. Rejecting the mismatch keeps the stored total meaningful.
+     */
+    private void verifyTotalMatchesParts(BillRequest request) {
+        BigDecimal parts = Stream.of(
+                        request.getConsultationFee(),
+                        request.getTestsFee(),
+                        request.getMedicationsFee(),
+                        request.getOtherCharges())
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (request.getTotalAmount() == null || parts.compareTo(request.getTotalAmount()) != 0) {
+            throw new IllegalArgumentException(
+                    "Total amount must equal the sum of the fees (" + parts.toPlainString() + ")");
+        }
+    }
+
+
 }

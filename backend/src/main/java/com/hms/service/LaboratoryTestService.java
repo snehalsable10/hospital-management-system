@@ -51,7 +51,7 @@ public class LaboratoryTestService {
      */
     @Cacheable(value = "laboratoryTests", key = "'getLaboratoryTestsByPatient:' + #patientId")
     public List<LaboratoryTest> getLaboratoryTestsByPatient(Long patientId) {
-        return laboratoryTestRepository.findByPatientId(patientId);
+        return laboratoryTestRepository.findByPatientIdAndIsActiveTrue(patientId);
     }
 
     /**
@@ -60,7 +60,7 @@ public class LaboratoryTestService {
      */
     @Cacheable(value = "laboratoryTests", key = "'getLaboratoryTestsByStatus:' + #status")
     public List<LaboratoryTest> getLaboratoryTestsByStatus(String status) {
-        return laboratoryTestRepository.findByStatus(status);
+        return laboratoryTestRepository.findByStatusAndIsActiveTrue(status);
     }
 
     /**
@@ -69,7 +69,7 @@ public class LaboratoryTestService {
      */
     @Cacheable(value = "laboratoryTests", key = "'searchByTestName:' + #testName")
     public List<LaboratoryTest> searchByTestName(String testName) {
-        return laboratoryTestRepository.findByTestNameIgnoreCaseContaining(testName);
+        return laboratoryTestRepository.findByTestNameIgnoreCaseContainingAndIsActiveTrue(testName);
     }
 
     /**
@@ -78,7 +78,7 @@ public class LaboratoryTestService {
      */
     @Cacheable(value = "laboratoryTests", key = "'getLaboratoryTestsByDateRange:' + #startDate + ':' + #endDate")
     public List<LaboratoryTest> getLaboratoryTestsByDateRange(LocalDate startDate, LocalDate endDate) {
-        return laboratoryTestRepository.findByTestDateBetween(startDate, endDate);
+        return laboratoryTestRepository.findByTestDateBetweenAndIsActiveTrue(startDate, endDate);
     }
 
     /**
@@ -177,7 +177,7 @@ public class LaboratoryTestService {
     public PageResponse<LaboratoryTest> getLaboratoryTestsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<LaboratoryTest> page = laboratoryTestRepository.findByPatientId(patientId, pageable);
+        Page<LaboratoryTest> page = laboratoryTestRepository.findByPatientIdAndIsActiveTrue(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -187,7 +187,7 @@ public class LaboratoryTestService {
     public PageResponse<LaboratoryTest> getLaboratoryTestsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<LaboratoryTest> page = laboratoryTestRepository.findByStatus(status, pageable);
+        Page<LaboratoryTest> page = laboratoryTestRepository.findByStatusAndIsActiveTrue(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -197,7 +197,7 @@ public class LaboratoryTestService {
     public PageResponse<LaboratoryTest> searchByTestNamePaginated(String testName, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<LaboratoryTest> page = laboratoryTestRepository.findByTestNameIgnoreCaseContaining(testName, pageable);
+        Page<LaboratoryTest> page = laboratoryTestRepository.findByTestNameIgnoreCaseContainingAndIsActiveTrue(testName, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -207,7 +207,7 @@ public class LaboratoryTestService {
     public PageResponse<LaboratoryTest> getLaboratoryTestsByDateRangePaginated(LocalDate startDate, LocalDate endDate, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<LaboratoryTest> page = laboratoryTestRepository.findByTestDateBetween(startDate, endDate, pageable);
+        Page<LaboratoryTest> page = laboratoryTestRepository.findByTestDateBetweenAndIsActiveTrue(startDate, endDate, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 }

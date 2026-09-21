@@ -54,7 +54,7 @@ public class DoctorService {
      */
     @Cacheable(value = "doctors", key = "'getDoctorsByDepartment:' + #departmentId")
     public List<Doctor> getDoctorsByDepartment(Long departmentId) {
-        return doctorRepository.findByDepartmentId(departmentId);
+        return doctorRepository.findByDepartmentIdAndIsActiveTrue(departmentId);
     }
 
     /**
@@ -63,7 +63,7 @@ public class DoctorService {
      */
     @Cacheable(value = "doctors", key = "'getDoctorsBySpecialization:' + #specialization")
     public List<Doctor> getDoctorsBySpecialization(String specialization) {
-        return doctorRepository.findBySpecialization(specialization);
+        return doctorRepository.findBySpecializationAndIsActiveTrue(specialization);
     }
 
     /**
@@ -186,7 +186,7 @@ public class DoctorService {
     public PageResponse<Doctor> getDoctorsByDepartmentPaginated(Long departmentId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Doctor> page = doctorRepository.findByDepartmentId(departmentId, pageable);
+        Page<Doctor> page = doctorRepository.findByDepartmentIdAndIsActiveTrue(departmentId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -196,7 +196,7 @@ public class DoctorService {
     public PageResponse<Doctor> getDoctorsBySpecializationPaginated(String specialization, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<Doctor> page = doctorRepository.findBySpecialization(specialization, pageable);
+        Page<Doctor> page = doctorRepository.findBySpecializationAndIsActiveTrue(specialization, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 

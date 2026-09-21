@@ -50,7 +50,7 @@ public class MedicalHistoryService {
      */
     @Cacheable(value = "medicalHistories", key = "'getMedicalHistoriesByPatient:' + #patientId")
     public List<MedicalHistory> getMedicalHistoriesByPatient(Long patientId) {
-        return medicalHistoryRepository.findByPatientId(patientId);
+        return medicalHistoryRepository.findByPatientIdAndIsActiveTrue(patientId);
     }
 
     /**
@@ -59,7 +59,7 @@ public class MedicalHistoryService {
      */
     @Cacheable(value = "medicalHistories", key = "'getMedicalHistoriesByStatus:' + #status")
     public List<MedicalHistory> getMedicalHistoriesByStatus(String status) {
-        return medicalHistoryRepository.findByStatus(status);
+        return medicalHistoryRepository.findByStatusAndIsActiveTrue(status);
     }
 
     /**
@@ -68,7 +68,7 @@ public class MedicalHistoryService {
      */
     @Cacheable(value = "medicalHistories", key = "'searchByConditionName:' + #conditionName")
     public List<MedicalHistory> searchByConditionName(String conditionName) {
-        return medicalHistoryRepository.findByConditionNameIgnoreCaseContaining(conditionName);
+        return medicalHistoryRepository.findByConditionNameIgnoreCaseContainingAndIsActiveTrue(conditionName);
     }
 
     /**
@@ -163,7 +163,7 @@ public class MedicalHistoryService {
     public PageResponse<MedicalHistory> getMedicalHistoriesByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<MedicalHistory> page = medicalHistoryRepository.findByPatientId(patientId, pageable);
+        Page<MedicalHistory> page = medicalHistoryRepository.findByPatientIdAndIsActiveTrue(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -173,7 +173,7 @@ public class MedicalHistoryService {
     public PageResponse<MedicalHistory> getMedicalHistoriesByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<MedicalHistory> page = medicalHistoryRepository.findByStatus(status, pageable);
+        Page<MedicalHistory> page = medicalHistoryRepository.findByStatusAndIsActiveTrue(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 
@@ -183,7 +183,7 @@ public class MedicalHistoryService {
     public PageResponse<MedicalHistory> searchByConditionNamePaginated(String conditionName, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
         Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
-        Page<MedicalHistory> page = medicalHistoryRepository.findByConditionNameIgnoreCaseContaining(conditionName, pageable);
+        Page<MedicalHistory> page = medicalHistoryRepository.findByConditionNameIgnoreCaseContainingAndIsActiveTrue(conditionName, pageable);
         return PaginationUtil.toPageResponse(page);
     }
 }

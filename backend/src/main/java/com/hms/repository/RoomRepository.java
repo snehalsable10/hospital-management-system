@@ -12,19 +12,19 @@ import java.util.Optional;
 @Repository
 public interface RoomRepository extends JpaRepository<Room, Long> {
     Optional<Room> findByRoomNumber(String roomNumber);
-    List<Room> findByRoomType(String roomType);
-    List<Room> findByWard(String ward);
-    List<Room> findByStatus(String status);
-    List<Room> findByRoomTypeAndStatus(String roomType, String status);
-    List<Room> findByWardAndStatus(String ward, String status);
+    List<Room> findByRoomTypeAndIsActiveTrue(String roomType);
+    List<Room> findByWardAndIsActiveTrue(String ward);
+    List<Room> findByStatusAndIsActiveTrue(String status);
+    List<Room> findByRoomTypeAndStatusAndIsActiveTrue(String roomType, String status);
+    List<Room> findByWardAndStatusAndIsActiveTrue(String ward, String status);
     boolean existsByRoomNumber(String roomNumber);
 
     // Paginated methods for performance optimization
-    Page<Room> findByRoomType(String roomType, Pageable pageable);
-    Page<Room> findByWard(String ward, Pageable pageable);
-    Page<Room> findByStatus(String status, Pageable pageable);
-    Page<Room> findByRoomTypeAndStatus(String roomType, String status, Pageable pageable);
-    Page<Room> findByWardAndStatus(String ward, String status, Pageable pageable);
+    Page<Room> findByRoomTypeAndIsActiveTrue(String roomType, Pageable pageable);
+    Page<Room> findByWardAndIsActiveTrue(String ward, Pageable pageable);
+    Page<Room> findByStatusAndIsActiveTrue(String status, Pageable pageable);
+    Page<Room> findByRoomTypeAndStatusAndIsActiveTrue(String roomType, String status, Pageable pageable);
+    Page<Room> findByWardAndStatusAndIsActiveTrue(String ward, String status, Pageable pageable);
 
     // Soft delete: lists must not show records flagged inactive
     List<Room> findByIsActiveTrue();

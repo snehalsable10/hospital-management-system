@@ -13,8 +13,8 @@ import java.util.Optional;
 public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     Optional<Doctor> findByEmail(String email);
     Optional<Doctor> findByLicenseNumber(String licenseNumber);
-    List<Doctor> findBySpecialization(String specialization);
-    List<Doctor> findByDepartmentId(Long departmentId);
+    List<Doctor> findBySpecializationAndIsActiveTrue(String specialization);
+    List<Doctor> findByDepartmentIdAndIsActiveTrue(Long departmentId);
     boolean existsByEmail(String email);
     boolean existsByLicenseNumber(String licenseNumber);
 
@@ -22,8 +22,8 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     Optional<Doctor> findByUserId(Long userId);
 
     // Paginated methods for performance optimization
-    Page<Doctor> findBySpecialization(String specialization, Pageable pageable);
-    Page<Doctor> findByDepartmentId(Long departmentId, Pageable pageable);
+    Page<Doctor> findBySpecializationAndIsActiveTrue(String specialization, Pageable pageable);
+    Page<Doctor> findByDepartmentIdAndIsActiveTrue(Long departmentId, Pageable pageable);
 
     // Soft delete: lists must not show records flagged inactive
     List<Doctor> findByIsActiveTrue();

@@ -10,15 +10,15 @@ import java.util.List;
 
 @Repository
 public interface MedicalHistoryRepository extends JpaRepository<MedicalHistory, Long> {
-    List<MedicalHistory> findByPatientId(Long patientId);
-    List<MedicalHistory> findByStatus(String status);
-    List<MedicalHistory> findByConditionNameIgnoreCaseContaining(String conditionName);
-    List<MedicalHistory> findByPatientIdAndStatus(Long patientId, String status);
+    List<MedicalHistory> findByPatientIdAndIsActiveTrue(Long patientId);
+    List<MedicalHistory> findByStatusAndIsActiveTrue(String status);
+    List<MedicalHistory> findByConditionNameIgnoreCaseContainingAndIsActiveTrue(String conditionName);
+    List<MedicalHistory> findByPatientIdAndStatusAndIsActiveTrue(Long patientId, String status);
 
     // Paginated methods for performance optimization
-    Page<MedicalHistory> findByPatientId(Long patientId, Pageable pageable);
-    Page<MedicalHistory> findByStatus(String status, Pageable pageable);
-    Page<MedicalHistory> findByConditionNameIgnoreCaseContaining(String conditionName, Pageable pageable);
+    Page<MedicalHistory> findByPatientIdAndIsActiveTrue(Long patientId, Pageable pageable);
+    Page<MedicalHistory> findByStatusAndIsActiveTrue(String status, Pageable pageable);
+    Page<MedicalHistory> findByConditionNameIgnoreCaseContainingAndIsActiveTrue(String conditionName, Pageable pageable);
 
     // Soft delete: lists must not show records flagged inactive
     List<MedicalHistory> findByIsActiveTrue();
