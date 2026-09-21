@@ -129,6 +129,15 @@
         </dependency>
 
         <!-- Testing -->
+        <!-- Flyway owns the schema from the baseline migration onwards.
+             Spring Boot 3.1 manages Flyway 9, where Postgres support is still
+             inside flyway-core; the separate flyway-database-postgresql module
+             only becomes necessary on Flyway 10. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
