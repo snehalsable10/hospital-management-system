@@ -4,6 +4,7 @@ import com.hms.entity.Appointment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -28,4 +29,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // Soft delete: lists must not show records flagged inactive
     List<Appointment> findByIsActiveTrue();
     Page<Appointment> findByIsActiveTrue(Pageable pageable);
+
+    // --- dashboard aggregates ---
+
+    long countByIsActiveTrue();
+
+    @Query("select a.status, count(a) from Appointment a where a.isActive = true group by a.status")
+    List<Object[]> countGroupedByStatus();
+
+    List<Appointment> findTop5ByIsActiveTrueOrderByAppointmentDateDescAppointmentTimeDesc();
+
 }

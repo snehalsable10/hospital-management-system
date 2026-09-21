@@ -12,11 +12,7 @@ import KPICard from '../components/dashboard/KPICard';
 import BarChart from '../components/charts/BarChart';
 import PieChart from '../components/charts/PieChart';
 import authService from '../services/authService';
-import patientService from '../services/patientService';
-import doctorService from '../services/doctorService';
-import appointmentService from '../services/appointmentService';
-import billService from '../services/billService';
-import roomService from '../services/roomService';
+import dashboardService from '../services/dashboardService';
 
 const STATUS_STYLES = {
   SCHEDULED: 'bg-info-100 text-info-800',
@@ -26,11 +22,17 @@ const STATUS_STYLES = {
   UNPAID: 'bg-warning-100 text-warning-800',
 };
 
+/** "14:30:00" -> "2:30 PM", matching how the appointments page reads. */
+const clockTime = (value) => {
+  if (!value) return '—';
+  const [h, m] = value.split(':');
+  const hour = Number(h);
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${m} ${suffix}`;
+};
+
 const money = (amount) =>
   `₹${Number(amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-
-const personName = (person, fallback) =>
-  person ? `${person.firstName} ${person.lastName}` : fallback;
 
 const StatusPill = ({ status }) => (
   <span
@@ -82,99 +84,41 @@ const Dashboard = () => {
     setError('');
 
     try {
-      // allSettled, not all: these endpoints have different role rules, and a
-      // doctor is legitimately refused bills and appointments. Promise.all
-      // would reject on that 403 and throw away the data that did arrive.
-      const results = await Promise.allSettled([
-        patientService.getAllPatients(),
-        doctorService.getAllDoctors(),
-        appointmentService.getAllAppointments(),
-        billService.getAllBills(),
-        roomService.getAllRooms(),
-      ]);
+      // One call. This used to fetch five full lists and count them here,
+      // which meant five round trips and every row of every table on the wire
+      // to render a handful of numbers.
+      const result = await dashboardService.getSummary();
+      const data = result.data || {};
 
-      // null means "this caller may not see it" - distinct from an empty list.
-      const unpack = (result) =>
-        result.status === 'fulfilled' ? result.value?.data || [] : null;
-
-      const [patients, doctors, appointments, bills, rooms] = results.map(unpack);
-
-      // A 403 is an expected answer for this role; anything else is a real fault.
-      const realFailure = results.find(
-        (r) => r.status === 'rejected' && r.reason?.response?.status !== 403
-      );
-      if (realFailure) {
-        setError(
-          realFailure.reason?.response?.data?.message ||
-            'Some dashboard data could not be loaded.'
-        );
-      }
-
+      // The server says which sections this role may see. A section it may not
+      // see comes back null rather than 0, so the panel is hidden instead of
+      // reading as "none yet".
+      const sections = data.sections || {};
       setAvailable({
-        patients: patients !== null,
-        doctors: doctors !== null,
-        appointments: appointments !== null,
-        bills: bills !== null,
-        rooms: rooms !== null,
+        patients: !!sections.patients,
+        doctors: !!sections.doctors,
+        appointments: !!sections.appointments,
+        bills: !!sections.bills,
+        rooms: !!sections.rooms,
       });
-
-      // Past this point a refused dataset behaves as empty, so the arithmetic
-      // below stays simple; `available` remembers the difference for rendering.
-      const safePatients = patients || [];
-      const safeDoctors = doctors || [];
-      const safeAppointments = appointments || [];
-      const safeBills = bills || [];
-      const safeRooms = rooms || [];
-
-      const totalRevenue = safeBills.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
-      const outstanding = safeBills
-        .filter((b) => b.status !== 'PAID')
-        .reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
 
       setStats({
-        totalPatients: safePatients.length,
-        totalDoctors: safeDoctors.length,
-        totalAppointments: safeAppointments.length,
-        totalRooms: safeRooms.length,
-        occupiedBeds: safeRooms.reduce((sum, r) => sum + (r.occupiedBeds || 0), 0),
-        totalBeds: safeRooms.reduce((sum, r) => sum + (r.capacity || 0), 0),
-        totalRevenue,
-        outstanding,
-        paidBills: safeBills.filter((b) => b.status === 'PAID').length,
-        unpaidBills: safeBills.filter((b) => b.status === 'UNPAID').length,
+        totalPatients: data.totalPatients ?? 0,
+        totalDoctors: data.totalDoctors ?? 0,
+        totalAppointments: data.totalAppointments ?? 0,
+        totalRooms: data.totalRooms ?? 0,
+        occupiedBeds: data.occupiedBeds ?? 0,
+        totalBeds: data.totalBeds ?? 0,
+        totalRevenue: data.totalRevenue ?? 0,
+        outstanding: data.outstanding ?? 0,
+        paidBills: data.paidBills ?? 0,
+        unpaidBills: data.unpaidBills ?? 0,
       });
 
-      const statusCounts = safeAppointments.reduce((acc, a) => {
-        acc[a.status] = (acc[a.status] || 0) + 1;
-        return acc;
-      }, {});
-      setAppointmentsByStatus(
-        Object.entries(statusCounts).map(([name, value]) => ({ name, value }))
-      );
-
-      const deptCounts = safeDoctors.reduce((acc, d) => {
-        const name = d.department?.name || 'Unassigned';
-        acc[name] = (acc[name] || 0) + 1;
-        return acc;
-      }, {});
-      setDoctorsByDepartment(
-        Object.entries(deptCounts).map(([name, value]) => ({ name, value }))
-      );
-
-      const byType = safeRooms.reduce((acc, room) => {
-        const type = room.roomType || 'Other';
-        if (!acc[type]) acc[type] = { type, occupied: 0, total: 0 };
-        acc[type].occupied += room.occupiedBeds || 0;
-        acc[type].total += room.capacity || 0;
-        return acc;
-      }, {});
-      setOccupancy(Object.values(byType));
-
-      setRecentAppointments(
-        [...safeAppointments]
-          .sort((a, b) => new Date(b.appointmentDate) - new Date(a.appointmentDate))
-          .slice(0, 5)
-      );
+      setAppointmentsByStatus(data.appointmentsByStatus || []);
+      setDoctorsByDepartment(data.doctorsByDepartment || []);
+      setOccupancy(data.occupancyByRoomType || []);
+      setRecentAppointments(data.recentAppointments || []);
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -329,7 +273,6 @@ const Dashboard = () => {
                     <th className="px-5 py-3 font-semibold">Time</th>
                     <th className="px-5 py-3 font-semibold">Patient</th>
                     <th className="px-5 py-3 font-semibold">Doctor</th>
-                    <th className="px-5 py-3 font-semibold">Reason</th>
                     <th className="px-5 py-3 font-semibold">Status</th>
                   </tr>
                 </thead>
@@ -343,16 +286,13 @@ const Dashboard = () => {
                           year: 'numeric',
                         })}
                       </td>
-                      <td className="px-5 py-3 text-gray-600">{appt.appointmentTime}</td>
+                      <td className="px-5 py-3 text-gray-600">{clockTime(appt.appointmentTime)}</td>
                       <td className="px-5 py-3 font-medium text-gray-900">
-                        {personName(appt.patient, `Patient #${appt.patient?.id ?? '—'}`)}
+                        {appt.patientName || '—'}
                       </td>
                       <td className="px-5 py-3 text-gray-600">
-                        {appt.doctor
-                          ? `Dr. ${appt.doctor.firstName} ${appt.doctor.lastName}`
-                          : '—'}
+                        {appt.doctorName ? `Dr. ${appt.doctorName}` : '—'}
                       </td>
-                      <td className="px-5 py-3 text-gray-600">{appt.reason}</td>
                       <td className="px-5 py-3">
                         <StatusPill status={appt.status} />
                       </td>

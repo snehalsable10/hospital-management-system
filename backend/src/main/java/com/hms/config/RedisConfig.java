@@ -100,6 +100,13 @@ public class RedisConfig implements CachingConfigurer {
                 .serializeValuesWith(values)
                 .entryTtl(Duration.ofMinutes(5));
 
+        // Dashboard cache: 1 minute. It aggregates across every module, so any
+        // write anywhere makes it stale; a short life is simpler and safer than
+        // evicting it from nine services.
+        RedisCacheConfiguration dashboardConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeValuesWith(values)
+                .entryTtl(Duration.ofMinutes(1));
+
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(config)
                 .withCacheConfiguration("patients", patientConfig)
@@ -110,6 +117,7 @@ public class RedisConfig implements CachingConfigurer {
                 .withCacheConfiguration("department", departmentConfig)
                 .withCacheConfiguration("appointments", appointmentConfig)
                 .withCacheConfiguration("appointment", appointmentConfig)
+                .withCacheConfiguration("dashboard", dashboardConfig)
                 .build();
     }
 

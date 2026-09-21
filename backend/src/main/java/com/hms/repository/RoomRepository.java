@@ -4,6 +4,7 @@ import com.hms.entity.Room;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -29,4 +30,17 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
     // Soft delete: lists must not show records flagged inactive
     List<Room> findByIsActiveTrue();
     Page<Room> findByIsActiveTrue(Pageable pageable);
+
+    // --- dashboard aggregates ---
+
+    long countByIsActiveTrue();
+
+    /**
+     * Occupied and total beds per room type. The hospital-wide totals are the
+     * sum of these rows, so there is no second query for them.
+     */
+    @Query("select r.roomType, coalesce(sum(r.occupiedBeds), 0), coalesce(sum(r.capacity), 0) "
+            + "from Room r where r.isActive = true group by r.roomType")
+    List<Object[]> bedsGroupedByType();
+
 }
