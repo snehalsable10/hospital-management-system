@@ -1,6 +1,8 @@
 package com.hms.repository;
 
 import com.hms.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -36,5 +38,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return true if exists, false if not
      */
     boolean existsByUsername(String username);
+
+    /**
+     * Deactivated users are kept so their audit trail still resolves, but they
+     * are not part of the list an administrator manages.
+     */
+    Page<User> findByIsActiveTrue(Pageable pageable);
+
+    Page<User> findByRoleAndIsActiveTrue(String role, Pageable pageable);
+
+    long countByRoleAndIsActiveTrue(String role);
 
 }

@@ -127,7 +127,11 @@ public class AuthService {
      * Returns null rather than throwing so a failed lookup denies access
      * instead of turning into a 500.
      */
-    private Long currentUserId() {
+    /**
+     * The id of the user making this request, or null when there is no usable
+     * authentication. Public so controllers can tell "me" from "someone else".
+     */
+    public Long currentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             return null;

@@ -3,13 +3,19 @@ package com.hms.service;
 import com.hms.dto.request.CreateUserRequest;
 import com.hms.dto.request.LoginRequest;
 import com.hms.dto.request.SignupRequest;
+import com.hms.dto.request.UpdateUserRequest;
 import com.hms.dto.response.ApiResponse;
 import com.hms.dto.response.AuthResponse;
+import com.hms.dto.response.PageResponse;
+import com.hms.dto.response.UserResponse;
 import com.hms.entity.User;
 import com.hms.exception.DuplicateResourceException;
+import com.hms.exception.ResourceNotFoundException;
 import com.hms.repository.UserRepository;
 import com.hms.security.JwtTokenProvider;
+import com.hms.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
@@ -185,5 +191,128 @@ public class UserService {
     public boolean userExistsByEmail(String email) {
         return userRepository.existsByEmail(email);
     }
+
+
+    /**
+     * List the users an administrator manages, newest last.
+     */
+    public PageResponse<UserResponse> getAllUsersPaginated(int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Page<User> page = userRepository.findByIsActiveTrue(
+                PaginationUtil.pageRequest(pageNumber, pageSize));
+        return PaginationUtil.toPageResponse(page.map(UserResponse::from));
+    }
+
+    public PageResponse<UserResponse> getUsersByRolePaginated(String role, int pageNumber, int pageSize) {
+        PaginationUtil.validatePaginationParams(pageNumber, pageSize);
+        Page<User> page = userRepository.findByRoleAndIsActiveTrue(
+                normaliseRole(role), PaginationUtil.pageRequest(pageNumber, pageSize));
+        return PaginationUtil.toPageResponse(page.map(UserResponse::from));
+    }
+
+    /**
+     * Edit a user.
+     *
+     * @param actingUserId the administrator making the change, so they cannot
+     *                     demote or deactivate themselves and lose their own
+     *                     access on the next request
+     */
+    public ApiResponse updateUser(Long id, UpdateUserRequest request, Long actingUserId) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        String role = normaliseRole(request.getRole());
+        boolean active = request.getIsActive() == null || request.getIsActive();
+        boolean isSelf = actingUserId != null && actingUserId.equals(id);
+
+        if (isSelf && !"ADMIN".equals(role)) {
+            throw new IllegalArgumentException(
+                    "You cannot change your own role - ask another administrator");
+        }
+        if (isSelf && !active) {
+            throw new IllegalArgumentException(
+                    "You cannot deactivate your own account");
+        }
+        if ("ADMIN".equals(user.getRole()) && (!"ADMIN".equals(role) || !active)) {
+            guardLastAdministrator();
+        }
+
+        userRepository.findByEmail(request.getEmail())
+                .filter(other -> !other.getId().equals(id))
+                .ifPresent(other -> {
+                    throw new DuplicateResourceException(
+                            "Email already registered: " + request.getEmail());
+                });
+
+        userRepository.findByUsername(request.getUsername())
+                .filter(other -> !other.getId().equals(id))
+                .ifPresent(other -> {
+                    throw new DuplicateResourceException(
+                            "Username already taken: " + request.getUsername());
+                });
+
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setPhone(request.getPhone());
+        user.setRole(role);
+        user.setIsActive(active);
+
+        // Blank means "leave it alone" - an administrator editing a name should
+        // not have to retype someone else's password.
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        userRepository.save(user);
+
+        return new ApiResponse("User updated successfully", true);
+    }
+
+    /**
+     * Deactivate a user. The row stays so the audit trail still resolves.
+     */
+    public ApiResponse deactivateUser(Long id, Long actingUserId) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        if (actingUserId != null && actingUserId.equals(id)) {
+            throw new IllegalArgumentException("You cannot deactivate your own account");
+        }
+        if ("ADMIN".equals(user.getRole())) {
+            guardLastAdministrator();
+        }
+
+        user.setIsActive(false);
+        userRepository.save(user);
+
+        return new ApiResponse("User deactivated successfully", true);
+    }
+
+    public Optional<UserResponse> getUserResponseById(Long id) {
+        return userRepository.findById(id).map(UserResponse::from);
+    }
+
+    private String normaliseRole(String role) {
+        String normalised = role == null ? "" : role.trim().toUpperCase();
+        if (!ALLOWED_ROLES.contains(normalised)) {
+            throw new IllegalArgumentException(
+                    "Unknown role: " + role + ". Allowed roles are " + ALLOWED_ROLES);
+        }
+        return normalised;
+    }
+
+    /**
+     * Removing the last administrator would leave nobody able to manage users,
+     * and no way back in through the UI.
+     */
+    private void guardLastAdministrator() {
+        if (userRepository.countByRoleAndIsActiveTrue("ADMIN") <= 1) {
+            throw new IllegalArgumentException(
+                    "This is the only administrator left - promote another one first");
+        }
+    }
+
 
 }

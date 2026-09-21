@@ -19,6 +19,7 @@ import MedicalHistoryManagement from './pages/MedicalHistoryManagement';
 import LaboratoryTestManagement from './pages/LaboratoryTestManagement';
 import BillManagement from './pages/BillManagement';
 import RoomManagement from './pages/RoomManagement';
+import UserManagement from './pages/UserManagement';
 
 // Error Pages
 import NotFound from './pages/NotFound';
@@ -53,6 +54,7 @@ function App() {
               <Route path="/laboratory-tests" element={<LaboratoryTestManagement />} />
               <Route path="/bills" element={<BillManagement />} />
               <Route path="/rooms" element={<RoomManagement />} />
+            <Route path="/users" element={<UserManagement />} />
             </Route>
 
             {/* Default & Error Routes */}

@@ -13,6 +13,7 @@ import {
   Stethoscope,
   ChevronRight,
   BedDouble,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -33,6 +34,7 @@ const MENU_ITEMS = [
   { path: '/laboratory-tests', icon: FlaskConical, label: 'Lab Tests', roles: ['ADMIN', 'STAFF'] },
   { path: '/bills', icon: DollarSign, label: 'Bills', roles: ['ADMIN', 'STAFF'] },
   { path: '/rooms', icon: BedDouble, label: 'Rooms', roles: ['ADMIN', 'STAFF', 'DOCTOR', 'PATIENT'] },
+  { path: '/users', icon: ShieldCheck, label: 'Users', roles: ['ADMIN'] },
 ];
 
 const Sidebar = ({ open }) => {
