@@ -1,0 +1,97 @@
+# Everything the app needs, from a clean machine:
+#
+#   docker compose up --build
+#   open http://localhost:3000
+#
+# No Postgres, Redis, Maven or Node installed on the host.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: hms-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hospital_management_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      # Published so you can reach the database with psql or a GUI client.
+      # Drop this line if you would rather it stay on the internal network.
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      # The backend waits on this, so it has to mean "accepting queries", not
+      # merely "process started".
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-hospital_management_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: hms-redis
+    # Caching is an optimisation here, not a store of record, so the data is
+    # deliberately not persisted: no appendonly, no volume.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: hms-backend
+    environment:
+      # The dev profile, because it sets ddl-auto=update and so builds the
+      # schema on a fresh volume. The prod profile uses validate and expects a
+      # schema to already exist - it has no migrations to create one yet.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+
+      # Environment variables outrank application-dev.properties, which
+      # hardcodes localhost. These point the app at the sibling containers.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-hospital_management_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+
+      # Fine for a throwaway local stack. Anywhere real, set JWT_SECRET
+      # yourself - anyone holding this value can mint a valid token.
+      JWT_SECRET: ${JWT_SECRET:-local_development_only_secret_key_at_least_64_bytes_long_for_hs512_signing}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Same-origin: nginx in this image proxies /api to the backend, so the
+        # browser never makes a cross-origin request.
+        VITE_API_URL: /api
+    container_name: hms-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      # Waits for the backend to answer its healthcheck, so the first page
+      # load is not met with a proxy error from a JVM that is still booting.
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
