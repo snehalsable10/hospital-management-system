@@ -59,9 +59,14 @@ frontend/.cache/
 .env.development
 .env.production
 .env.test
+# A blanket ignore on *.properties also hid the application config, which
+# holds no secrets and is needed to run the app at all. The re-includes below
+# name the files that are safe; anything else ending in .properties stays out.
 *.properties
 !*.example.properties
+!*.properties.example
 !application.properties
+!application-prod.properties
 !pom.xml
 secrets/
 private/
@@ -176,9 +181,10 @@ dependency-check-report.*
 # ============================================
 # Docker
 # ============================================
-Dockerfile
+# Dockerfiles and .dockerignore are build source and belong in the repo -
+# without them nobody can build the images. Only the local override file,
+# which is per-machine by design, is ignored.
 docker-compose.override.yml
-.dockerignore
 
 # ============================================
 # Build & Distribution
@@ -243,12 +249,17 @@ temp/
 # ============================================
 # Application Secrets (MOST IMPORTANT)
 # ============================================
-backend/src/main/resources/application.properties
+# Only the files that actually hold a secret are ignored.
+#
+# application-dev.properties carries a real local database password and a
+# development JWT key, so it stays out; application-dev.properties.example is
+# tracked in its place. application.properties and application-prod.properties
+# hold no literal secrets - prod reads every one of them from the environment -
+# and ignoring them meant a fresh clone could not start the backend at all.
 backend/src/main/resources/application-local.properties
-backend/src/main/resources/application-prod.properties
 backend/src/main/resources/application-dev.properties
+backend/src/main/resources/application.properties.backup
 application-dev.properties
-application-prod.properties
 application-local.properties
 
 # ============================================

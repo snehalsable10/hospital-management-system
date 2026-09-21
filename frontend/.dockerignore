@@ -1,0 +1,25 @@
+# Installed inside the image by npm ci, from the lockfile. Copying the host's
+# copy in would be slow and could carry platform-specific binaries.
+node_modules/
+
+# Build output - the image builds its own.
+dist/
+build/
+
+# Local tooling and editors
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Secrets never belong in a build context: everything in it is sent to the
+# daemon and can end up in a layer.
+.env
+.env.*
+!.env.example
+
+# VCS
+.git/
+.gitignore

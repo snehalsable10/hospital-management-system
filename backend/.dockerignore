@@ -1,0 +1,25 @@
+# Build output - the image builds its own, and copying a host build in would
+# mask a broken build.
+target/
+
+# Local tooling and editors
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# Logs and local data
+logs/
+*.log
+
+# Secrets never belong in a build context: everything in it is sent to the
+# daemon and can end up in a layer.
+.env
+.env.*
+!.env.example
+
+# VCS
+.git/
+.gitignore

@@ -1,0 +1,118 @@
+# ====================================
+# Development Profile - EXAMPLE
+# ====================================
+# Copy this to application-dev.properties and adjust it for your machine:
+#
+#   cp application-dev.properties.example application-dev.properties
+#
+# The real file is gitignored, because a local copy usually ends up holding a
+# real database password. Keep it that way.
+#
+# Every value below works as-is against the docker compose stack, and the two
+# credentials read from the environment first, so you can override them
+# without editing the file.
+
+# ====================================
+# Development Profile - Local Machine
+# ====================================
+
+# ====================================
+# Server Configuration
+# ====================================
+server.port=8080
+
+# ====================================
+# Database Configuration (PostgreSQL) - LOCAL DEV
+# ====================================
+spring.datasource.url=jdbc:postgresql://localhost:5432/hospital_management_db
+spring.datasource.username=postgres
+spring.datasource.password=${DB_PASSWORD:postgres}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# ====================================
+# JPA & Hibernate Configuration - DEV
+# ====================================
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# ====================================
+# JWT Configuration - DEV
+# ====================================
+# IMPORTANT: This is a development key only
+# For production, use a strong random 256-bit key from environment variable
+jwt.secret=${JWT_SECRET:dev_secret_key_do_not_use_in_production_this_is_only_for_local_testing_12345678}
+jwt.expiration=86400000
+
+# ====================================
+# Logging Configuration - DEV
+# ====================================
+# Development logging: more verbose than prod, but still safe
+# IMPORTANT: Never log sensitive data (passwords, tokens, PHI)
+logging.level.root=WARN
+logging.level.com.hms=INFO
+logging.level.org.springframework.web=INFO
+logging.level.org.springframework.security=INFO
+logging.level.org.springframework.boot.autoconfigure=INFO
+
+# Reduce noise from third-party libraries
+logging.level.org.hibernate=WARN
+logging.level.org.hibernate.SQL=DEBUG
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+
+# JSON logging for structured analysis
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n
+logging.file.name=logs/application-dev.log
+logging.file.max-size=10MB
+logging.file.max-history=10
+
+# ====================================
+# CORS Configuration - DEV
+# ====================================
+# Allow React dev server on 3000/3002
+server.servlet.context-path=/
+
+# ====================================
+# Application Info - DEV
+# ====================================
+spring.application.name=Hospital Management System (DEV)
+app.version=1.0.0-DEV
+app.environment=development
+
+# ====================================
+# Redis Cache Configuration - DEV
+# ====================================
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+spring.data.redis.password=
+spring.data.redis.database=0
+spring.data.redis.timeout=60000
+spring.data.redis.lettuce.pool.max-active=20
+spring.data.redis.lettuce.pool.max-idle=10
+spring.data.redis.lettuce.pool.min-idle=5
+
+# ====================================
+# Spring Boot Actuator - Health & Metrics - DEV
+# ====================================
+# Expose all actuator endpoints in development
+management.endpoints.web.exposure.include=health,metrics,info
+management.endpoints.web.base-path=/actuator
+# Show detailed health information in development
+management.endpoint.health.show-details=always
+management.endpoint.health.show-components=when-authorized
+# Enable metrics endpoints
+management.metrics.enable.all=true
+management.metrics.export.simple.enabled=true
+# Redis is a cache, not a hard dependency - see the note in application-prod.properties.
+management.health.redis.enabled=false
+
+# ====================================
+# Performance Monitoring - DEV
+# ====================================
+# Log a WARN for any request slower than this (milliseconds)
+hms.performance.slow-request-threshold-ms=500
+# Hibernate logs any query slower than this (milliseconds)
+spring.jpa.properties.hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS=300
+# Slow queries log at INFO on this logger; org.hibernate is WARN above, so set it explicitly
+logging.level.org.hibernate.SQL_SLOW=INFO
