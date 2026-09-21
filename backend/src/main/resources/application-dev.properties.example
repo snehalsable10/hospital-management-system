@@ -116,3 +116,17 @@ hms.performance.slow-request-threshold-ms=500
 spring.jpa.properties.hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS=300
 # Slow queries log at INFO on this logger; org.hibernate is WARN above, so set it explicitly
 logging.level.org.hibernate.SQL_SLOW=INFO
+# ====================================
+# Authentication Hardening
+# ====================================
+# An account is refused after this many consecutive failed sign-ins, for this
+# long. The window slides: each failure pushes the expiry out, so guesses
+# cannot be paced to stay under the limit.
+hms.security.login.max-attempts=5
+hms.security.login.lockout-minutes=15
+
+# Per-IP cap on /api/auth/login and /api/auth/signup - the only endpoints
+# reachable without a token. Counted in a fixed window.
+hms.security.rate-limit.enabled=true
+hms.security.rate-limit.requests=20
+hms.security.rate-limit.window-seconds=60

@@ -31,6 +31,11 @@ public class AuditService {
         write(email, "LOGOUT email={} ip={}", email, clientIp);
     }
 
+    /** An account refused because it has failed too many times recently. */
+    public void loginBlocked(String email, String clientIp) {
+        write(email, "LOGIN_BLOCKED email={} ip={}", email, clientIp);
+    }
+
     public void userRegistered(String email, String role, String clientIp) {
         write(email, "USER_REGISTERED email={} role={} ip={}", email, role, clientIp);
     }

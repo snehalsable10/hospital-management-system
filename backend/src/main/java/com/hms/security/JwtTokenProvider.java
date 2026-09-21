@@ -6,7 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 
 @Component
@@ -33,6 +36,15 @@ public class JwtTokenProvider {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
 
         return Jwts.builder()
+                // A unique id per token.
+                //
+                // Without it the claims are subject, username, role, issued-at
+                // and expiry - and the two timestamps are second-granularity,
+                // so two sign-ins by the same user inside one second produced
+                // byte-identical tokens. Logging one session out then revoked
+                // the other, because the blacklist had no way to tell them
+                // apart.
+                .setId(UUID.randomUUID().toString())
                 .setSubject(String.valueOf(userId))
                 .claim("username", username)
                 .claim("role", role)
@@ -128,6 +140,31 @@ public class JwtTokenProvider {
             return authHeader.substring(7);
         }
         return null;
+    }
+
+
+    /**
+     * When this token stops being valid.
+     *
+     * The blacklist uses it as a time-to-live: there is no point keeping a
+     * revoked token on file for longer than it would have been accepted
+     * anyway.
+     *
+     * @return the expiry instant, or empty if the token cannot be read
+     */
+    public Optional<Instant> getExpiry(String token) {
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            Date expiration = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getExpiration();
+            return expiration == null ? Optional.empty() : Optional.of(expiration.toInstant());
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
 }

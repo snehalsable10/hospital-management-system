@@ -15,6 +15,7 @@ import com.hms.repository.UserRepository;
 import com.hms.security.JwtTokenProvider;
 import com.hms.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     /**
@@ -37,9 +39,15 @@ public class UserService {
      */
     public static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "DOCTOR", "STAFF", "PATIENT");
 
+    /**
+     * The only answer a failed sign-in ever gets, whatever was actually wrong.
+     */
+    private static final String INVALID_CREDENTIALS = "Invalid email or password";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final LoginAttemptService loginAttemptService;
 
     /**
      * Register a new user (Signup)
@@ -123,30 +131,39 @@ public class UserService {
      * @return AuthResponse with token and user details
      */
     public ApiResponse login(LoginRequest loginRequest) {
-        try {
-            // Find user by email
-            Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
+        String email = loginRequest.getEmail();
 
-            if (!userOptional.isPresent()) {
-                return new ApiResponse("Email not registered", false);
+        // Refuse a locked account before touching the password, so a lockout
+        // cannot itself be used to time whether a password was close.
+        if (loginAttemptService.isLocked(email)) {
+            return new ApiResponse(
+                    "Too many failed attempts. Try again in "
+                            + loginAttemptService.getLockoutMinutes() + " minutes.", false);
+        }
+
+        try {
+            Optional<User> userOptional = userRepository.findByEmail(email);
+
+            // One message for every rejection.
+            //
+            // This used to answer "Email not registered" or "Invalid password"
+            // depending on which was wrong, which let anyone read off whether
+            // an address had an account - useful for building a target list
+            // and for confirming that a leaked address belongs to a patient
+            // here. An inactive account is folded in for the same reason.
+            if (userOptional.isEmpty()
+                    || !userOptional.get().getIsActive()
+                    || !passwordEncoder.matches(loginRequest.getPassword(),
+                            userOptional.get().getPassword())) {
+                loginAttemptService.recordFailure(email);
+                return new ApiResponse(INVALID_CREDENTIALS, false);
             }
 
             User user = userOptional.get();
+            loginAttemptService.reset(email);
 
-            // Check if account is active
-            if (!user.getIsActive()) {
-                return new ApiResponse("Account is inactive", false);
-            }
-
-            // Verify password (compare with hashed password)
-            if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-                return new ApiResponse("Invalid password", false);
-            }
-
-            // Generate JWT token
             String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole());
 
-            // Build response with user details
             AuthResponse authResponse = AuthResponse.builder()
                     .message("Login successful")
                     .token(token)
@@ -161,7 +178,10 @@ public class UserService {
 
             return new ApiResponse("Login successful", authResponse, true);
         } catch (Exception e) {
-            return new ApiResponse("Login failed: " + e.getMessage(), false);
+            // The reason stays in the log; the caller gets nothing it could
+            // use to tell one failure apart from another.
+            log.error("Login failed for {}", email, e);
+            return new ApiResponse(INVALID_CREDENTIALS, false);
         }
     }
 

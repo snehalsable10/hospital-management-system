@@ -3,6 +3,7 @@ package com.hms.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hms.dto.response.ApiResponse;
 import com.hms.security.JwtAuthenticationFilter;
+import com.hms.security.RateLimitFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -36,6 +37,7 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final ObjectMapper objectMapper;
 
     /**
@@ -82,7 +84,11 @@ public class SecurityConfig {
                 )
 
                 // Add JWT filter before UsernamePasswordAuthenticationFilter
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Ahead of the JWT filter: the endpoints it guards are the
+                // unauthenticated ones, so there is no token to inspect and no
+                // reason to do that work before turning the request away.
+                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

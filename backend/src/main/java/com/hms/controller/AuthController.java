@@ -7,6 +7,7 @@ import com.hms.dto.request.SignupRequest;
 import com.hms.dto.response.ApiResponse;
 import com.hms.entity.User;
 import com.hms.security.JwtTokenProvider;
+import com.hms.service.LoginAttemptService;
 import com.hms.service.TokenBlacklistService;
 import com.hms.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +28,7 @@ public class AuthController {
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
+    private final LoginAttemptService loginAttemptService;
     private final AuditService auditService;
 
     /**
@@ -67,15 +69,25 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> login(@Valid @RequestBody LoginRequest loginRequest,
                                              HttpServletRequest request) {
-        ApiResponse response = userService.login(loginRequest);
         String ip = clientIp(request);
+
+        // Read the lock before attempting, so the audit trail distinguishes
+        // "wrong password again" from "refused without being checked".
+        boolean locked = loginAttemptService.isLocked(loginRequest.getEmail());
+
+        ApiResponse response = userService.login(loginRequest);
+
         if (response.getSuccess()) {
             auditService.loginSucceeded(loginRequest.getEmail(), ip);
             return ResponseEntity.status(HttpStatus.OK).body(response);
+        }
+
+        if (locked) {
+            auditService.loginBlocked(loginRequest.getEmail(), ip);
         } else {
             auditService.loginFailed(loginRequest.getEmail(), ip);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
     /**
