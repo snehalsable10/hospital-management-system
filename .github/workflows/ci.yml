@@ -1,0 +1,94 @@
+name: CI
+
+# Runs on every push and every pull request to main. The two jobs are
+# independent - a frontend change should not wait on Maven, and a backend
+# change should not wait on npm.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to the same branch cancels the run still in flight for it, so
+# only the newest commit is tested.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Java 17)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Java 17 to match maven.compiler.target in pom.xml, not whatever the
+      # runner ships with.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - name: Compile
+        run: mvn -B -ntp -f backend/pom.xml compile
+
+      # The suite is unit tests only - no database, no Spring context - so
+      # there is nothing to provision here.
+      - name: Test
+        run: mvn -B -ntp -f backend/pom.xml test
+
+      # Kept even when a step fails, because a red run is when the report is
+      # worth reading.
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Package
+        run: mvn -B -ntp -f backend/pom.xml package -DskipTests
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/*.jar
+          retention-days: 7
+
+  frontend:
+    name: Frontend (Node 20)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # ci, not install: it installs exactly what the lockfile pins and fails
+      # if the lockfile and package.json disagree.
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      # There is no frontend test runner yet, so the build is the check: it
+      # fails on an unresolved import, a syntax error or a bad JSX reference.
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 7
