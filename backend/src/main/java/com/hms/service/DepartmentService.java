@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -117,7 +116,7 @@ public class DepartmentService {
      */
     public PageResponse<Department> getAllDepartmentsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Department> page = departmentRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }

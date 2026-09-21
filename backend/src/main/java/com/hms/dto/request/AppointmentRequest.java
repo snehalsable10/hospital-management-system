@@ -19,7 +19,8 @@ public class AppointmentRequest {
     private Long doctorId;
 
     @NotNull(message = "Appointment date is required")
-    @FutureOrPresent(message = "Appointment date cannot be in the past")
+    // Only enforced on create - see OnCreate.
+    @FutureOrPresent(message = "Appointment date cannot be in the past", groups = OnCreate.class)
     private LocalDate appointmentDate;
 
     @NotNull(message = "Appointment time is required")

@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -176,7 +175,7 @@ public class DoctorService {
      */
     public PageResponse<Doctor> getAllDoctorsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Doctor> page = doctorRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -186,7 +185,7 @@ public class DoctorService {
      */
     public PageResponse<Doctor> getDoctorsByDepartmentPaginated(Long departmentId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Doctor> page = doctorRepository.findByDepartmentId(departmentId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -196,7 +195,7 @@ public class DoctorService {
      */
     public PageResponse<Doctor> getDoctorsBySpecializationPaginated(String specialization, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Doctor> page = doctorRepository.findBySpecialization(specialization, pageable);
         return PaginationUtil.toPageResponse(page);
     }

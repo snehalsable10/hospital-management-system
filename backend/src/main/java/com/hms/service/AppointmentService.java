@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -174,7 +173,7 @@ public class AppointmentService {
      */
     public PageResponse<Appointment> getAllAppointmentsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Appointment> page = appointmentRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -184,7 +183,7 @@ public class AppointmentService {
      */
     public PageResponse<Appointment> getAppointmentsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Appointment> page = appointmentRepository.findByPatientId(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -194,7 +193,7 @@ public class AppointmentService {
      */
     public PageResponse<Appointment> getAppointmentsByDoctorPaginated(Long doctorId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Appointment> page = appointmentRepository.findByDoctorId(doctorId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -204,7 +203,7 @@ public class AppointmentService {
      */
     public PageResponse<Appointment> getAppointmentsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Appointment> page = appointmentRepository.findByStatus(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -214,7 +213,7 @@ public class AppointmentService {
      */
     public PageResponse<Appointment> getAppointmentsByDateRangePaginated(LocalDate startDate, LocalDate endDate, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Appointment> page = appointmentRepository.findByAppointmentDateBetween(startDate, endDate, pageable);
         return PaginationUtil.toPageResponse(page);
     }

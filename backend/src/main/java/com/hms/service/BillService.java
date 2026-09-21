@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -217,7 +216,7 @@ public class BillService {
      */
     public PageResponse<Bill> getAllBillsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Bill> page = billRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -227,7 +226,7 @@ public class BillService {
      */
     public PageResponse<Bill> getBillsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Bill> page = billRepository.findByPatientId(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -237,7 +236,7 @@ public class BillService {
      */
     public PageResponse<Bill> getBillsByDoctorPaginated(Long doctorId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Bill> page = billRepository.findByDoctorId(doctorId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -247,7 +246,7 @@ public class BillService {
      */
     public PageResponse<Bill> getBillsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Bill> page = billRepository.findByStatus(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -257,7 +256,7 @@ public class BillService {
      */
     public PageResponse<Bill> getBillsByDateRangePaginated(LocalDate startDate, LocalDate endDate, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Bill> page = billRepository.findByBillDateBetween(startDate, endDate, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -267,7 +266,7 @@ public class BillService {
      */
     public PageResponse<Bill> getPatientUnpaidBillsPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Bill> page = billRepository.findByPatientIdAndStatus(patientId, "UNPAID", pageable);
         return PaginationUtil.toPageResponse(page);
     }

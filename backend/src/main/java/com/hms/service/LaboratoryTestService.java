@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -167,7 +166,7 @@ public class LaboratoryTestService {
      */
     public PageResponse<LaboratoryTest> getAllLaboratoryTestsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<LaboratoryTest> page = laboratoryTestRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -177,7 +176,7 @@ public class LaboratoryTestService {
      */
     public PageResponse<LaboratoryTest> getLaboratoryTestsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<LaboratoryTest> page = laboratoryTestRepository.findByPatientId(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -187,7 +186,7 @@ public class LaboratoryTestService {
      */
     public PageResponse<LaboratoryTest> getLaboratoryTestsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<LaboratoryTest> page = laboratoryTestRepository.findByStatus(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -197,7 +196,7 @@ public class LaboratoryTestService {
      */
     public PageResponse<LaboratoryTest> searchByTestNamePaginated(String testName, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<LaboratoryTest> page = laboratoryTestRepository.findByTestNameIgnoreCaseContaining(testName, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -207,7 +206,7 @@ public class LaboratoryTestService {
      */
     public PageResponse<LaboratoryTest> getLaboratoryTestsByDateRangePaginated(LocalDate startDate, LocalDate endDate, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<LaboratoryTest> page = laboratoryTestRepository.findByTestDateBetween(startDate, endDate, pageable);
         return PaginationUtil.toPageResponse(page);
     }

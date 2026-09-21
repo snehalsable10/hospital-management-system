@@ -1,6 +1,7 @@
 package com.hms.controller;
 
 import com.hms.dto.request.AppointmentRequest;
+import com.hms.dto.request.OnCreate;
 import com.hms.dto.response.ApiResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Appointment;
@@ -12,7 +13,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.groups.Default;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -176,7 +179,7 @@ public class AppointmentController {
     })
     public ResponseEntity<ApiResponse> createAppointment(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Appointment data", required = true)
-            @Valid @RequestBody AppointmentRequest request) {
+            @Validated({Default.class, OnCreate.class}) @RequestBody AppointmentRequest request) {
         ApiResponse response = appointmentService.createAppointment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

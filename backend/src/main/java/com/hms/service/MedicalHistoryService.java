@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -153,7 +152,7 @@ public class MedicalHistoryService {
      */
     public PageResponse<MedicalHistory> getAllMedicalHistoriesPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<MedicalHistory> page = medicalHistoryRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -163,7 +162,7 @@ public class MedicalHistoryService {
      */
     public PageResponse<MedicalHistory> getMedicalHistoriesByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<MedicalHistory> page = medicalHistoryRepository.findByPatientId(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -173,7 +172,7 @@ public class MedicalHistoryService {
      */
     public PageResponse<MedicalHistory> getMedicalHistoriesByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<MedicalHistory> page = medicalHistoryRepository.findByStatus(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -183,7 +182,7 @@ public class MedicalHistoryService {
      */
     public PageResponse<MedicalHistory> searchByConditionNamePaginated(String conditionName, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<MedicalHistory> page = medicalHistoryRepository.findByConditionNameIgnoreCaseContaining(conditionName, pageable);
         return PaginationUtil.toPageResponse(page);
     }

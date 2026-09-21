@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -46,7 +45,7 @@ public class PatientService {
      */
     public PageResponse<Patient> getAllPatientsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Patient> page = patientRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -76,7 +75,7 @@ public class PatientService {
      */
     public PageResponse<Patient> searchByFirstNamePaginated(String firstName, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Patient> page = patientRepository.findByFirstNameIgnoreCaseContainingAndIsActiveTrue(firstName, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -97,7 +96,7 @@ public class PatientService {
      */
     public PageResponse<Patient> searchByLastNamePaginated(String lastName, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Patient> page = patientRepository.findByLastNameIgnoreCaseContainingAndIsActiveTrue(lastName, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -118,7 +117,7 @@ public class PatientService {
      */
     public PageResponse<Patient> searchByCityPaginated(String city, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Patient> page = patientRepository.findByCityAndIsActiveTrue(city, pageable);
         return PaginationUtil.toPageResponse(page);
     }

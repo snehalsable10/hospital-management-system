@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -188,7 +187,7 @@ public class PrescriptionService {
      */
     public PageResponse<Prescription> getAllPrescriptionsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Prescription> page = prescriptionRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -198,7 +197,7 @@ public class PrescriptionService {
      */
     public PageResponse<Prescription> getPrescriptionsByAppointmentPaginated(Long appointmentId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Prescription> page = prescriptionRepository.findByAppointmentId(appointmentId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -208,7 +207,7 @@ public class PrescriptionService {
      */
     public PageResponse<Prescription> getPrescriptionsByPatientPaginated(Long patientId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Prescription> page = prescriptionRepository.findByPatientId(patientId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -218,7 +217,7 @@ public class PrescriptionService {
      */
     public PageResponse<Prescription> getPrescriptionsByDoctorPaginated(Long doctorId, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Prescription> page = prescriptionRepository.findByDoctorId(doctorId, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -228,7 +227,7 @@ public class PrescriptionService {
      */
     public PageResponse<Prescription> getPrescriptionsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Prescription> page = prescriptionRepository.findByStatus(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }

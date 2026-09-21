@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -217,7 +216,7 @@ public class RoomService {
      */
     public PageResponse<Room> getAllRoomsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Room> page = roomRepository.findByIsActiveTrue(pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -227,7 +226,7 @@ public class RoomService {
      */
     public PageResponse<Room> getRoomsByTypePaginated(String roomType, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Room> page = roomRepository.findByRoomType(roomType, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -237,7 +236,7 @@ public class RoomService {
      */
     public PageResponse<Room> getRoomsByWardPaginated(String ward, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Room> page = roomRepository.findByWard(ward, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -247,7 +246,7 @@ public class RoomService {
      */
     public PageResponse<Room> getRoomsByStatusPaginated(String status, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Room> page = roomRepository.findByStatus(status, pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -257,7 +256,7 @@ public class RoomService {
      */
     public PageResponse<Room> getAvailableRoomsPaginated(int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Room> page = roomRepository.findByStatus("AVAILABLE", pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -267,7 +266,7 @@ public class RoomService {
      */
     public PageResponse<Room> getAvailableRoomsByTypePaginated(String roomType, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Room> page = roomRepository.findByRoomTypeAndStatus(roomType, "AVAILABLE", pageable);
         return PaginationUtil.toPageResponse(page);
     }
@@ -277,7 +276,7 @@ public class RoomService {
      */
     public PageResponse<Room> getAvailableRoomsByWardPaginated(String ward, int pageNumber, int pageSize) {
         PaginationUtil.validatePaginationParams(pageNumber, pageSize);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtil.pageRequest(pageNumber, pageSize);
         Page<Room> page = roomRepository.findByWardAndStatus(ward, "AVAILABLE", pageable);
         return PaginationUtil.toPageResponse(page);
     }
