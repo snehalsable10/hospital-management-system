@@ -1,84 +1,88 @@
 import api from './api';
 
+/**
+ * Medical histories hang off a patient only - there is no doctor reference,
+ * just a free-text doctorNotes field. They can be narrowed by patient, status
+ * or a condition-name search. Paginated calls put a PageResponse in `data`:
+ *   { content, pageNumber, pageSize, totalElements, totalPages }
+ */
 const medicalHistoryService = {
-  // Get all medical histories
   getAllMedicalHistories: async () => {
-    try {
-      const response = await api.get('/medical-histories');
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get('/medical-histories');
+    return response.data;
   },
 
-  // Get a specific medical history by ID
+  getAllMedicalHistoriesPaginated: async (pageNumber = 0, pageSize = 10) => {
+    const response = await api.get('/medical-histories/paginated', {
+      params: { pageNumber, pageSize },
+    });
+    return response.data;
+  },
+
   getMedicalHistoryById: async (id) => {
-    try {
-      const response = await api.get(`/medical-histories/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/medical-histories/${id}`);
+    return response.data;
   },
 
-  // Get all medical histories for a patient
   getMedicalHistoriesByPatient: async (patientId) => {
-    try {
-      const response = await api.get(`/medical-histories/patient/${patientId}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/medical-histories/patient/${patientId}`);
+    return response.data;
   },
 
-  // Get medical histories by status
+  getMedicalHistoriesByPatientPaginated: async (
+    patientId,
+    pageNumber = 0,
+    pageSize = 10
+  ) => {
+    const response = await api.get(`/medical-histories/patient/${patientId}/paginated`, {
+      params: { pageNumber, pageSize },
+    });
+    return response.data;
+  },
+
   getMedicalHistoriesByStatus: async (status) => {
-    try {
-      const response = await api.get(`/medical-histories/status/${status}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(
+      `/medical-histories/status/${encodeURIComponent(status)}`
+    );
+    return response.data;
   },
 
-  // Search medical histories by condition name
+  getMedicalHistoriesByStatusPaginated: async (status, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(
+      `/medical-histories/status/${encodeURIComponent(status)}/paginated`,
+      { params: { pageNumber, pageSize } }
+    );
+    return response.data;
+  },
+
   searchByConditionName: async (conditionName) => {
-    try {
-      const response = await api.get(`/medical-histories/search/${conditionName}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(
+      `/medical-histories/search/${encodeURIComponent(conditionName)}`
+    );
+    return response.data;
   },
 
-  // Create a new medical history entry
+  searchByConditionNamePaginated: async (conditionName, pageNumber = 0, pageSize = 10) => {
+    const response = await api.get(
+      `/medical-histories/search/${encodeURIComponent(conditionName)}/paginated`,
+      { params: { pageNumber, pageSize } }
+    );
+    return response.data;
+  },
+
   createMedicalHistory: async (medicalHistoryData) => {
-    try {
-      const response = await api.post('/medical-histories', medicalHistoryData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post('/medical-histories', medicalHistoryData);
+    return response.data;
   },
 
-  // Update an existing medical history entry
   updateMedicalHistory: async (id, medicalHistoryData) => {
-    try {
-      const response = await api.put(`/medical-histories/${id}`, medicalHistoryData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.put(`/medical-histories/${id}`, medicalHistoryData);
+    return response.data;
   },
 
-  // Delete a medical history entry
   deleteMedicalHistory: async (id) => {
-    try {
-      const response = await api.delete(`/medical-histories/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.delete(`/medical-histories/${id}`);
+    return response.data;
   },
 };
 
