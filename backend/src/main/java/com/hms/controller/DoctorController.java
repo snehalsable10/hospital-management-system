@@ -2,6 +2,7 @@ package com.hms.controller;
 
 import com.hms.dto.request.DoctorRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.DoctorResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Doctor;
 import com.hms.service.DoctorService;
@@ -45,7 +46,7 @@ public class DoctorController {
     })
     public ResponseEntity<ApiResponse> getAllDoctors() {
         List<Doctor> doctors = doctorService.getAllDoctors();
-        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", doctors, true));
+        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", DoctorResponse.from(doctors), true));
     }
 
     /**
@@ -72,7 +73,7 @@ public class DoctorController {
                     .body(new ApiResponse("Doctor not found", false));
         }
 
-        return ResponseEntity.ok(new ApiResponse("Doctor retrieved successfully", doctor.get(), true));
+        return ResponseEntity.ok(new ApiResponse("Doctor retrieved successfully", DoctorResponse.from(doctor.get()), true));
     }
 
     /**
@@ -92,7 +93,7 @@ public class DoctorController {
             @Parameter(description = "Department ID", required = true)
             @PathVariable Long departmentId) {
         List<Doctor> doctors = doctorService.getDoctorsByDepartment(departmentId);
-        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", doctors, true));
+        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", DoctorResponse.from(doctors), true));
     }
 
     /**
@@ -112,7 +113,7 @@ public class DoctorController {
             @Parameter(description = "Specialization (e.g., Cardiology, Pediatrics)", required = true)
             @PathVariable String specialization) {
         List<Doctor> doctors = doctorService.getDoctorsBySpecialization(specialization);
-        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", doctors, true));
+        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", DoctorResponse.from(doctors), true));
     }
 
     /**
@@ -214,7 +215,7 @@ public class DoctorController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Doctor> response = doctorService.getAllDoctorsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", DoctorResponse.from(response), true));
     }
 
     /**
@@ -237,7 +238,7 @@ public class DoctorController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Doctor> response = doctorService.getDoctorsByDepartmentPaginated(departmentId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", DoctorResponse.from(response), true));
     }
 
     /**
@@ -260,6 +261,6 @@ public class DoctorController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Doctor> response = doctorService.getDoctorsBySpecializationPaginated(specialization, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Doctors retrieved successfully", DoctorResponse.from(response), true));
     }
 }

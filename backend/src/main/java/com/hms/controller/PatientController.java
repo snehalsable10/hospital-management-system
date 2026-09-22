@@ -2,6 +2,7 @@ package com.hms.controller;
 
 import com.hms.dto.request.PatientRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.PatientResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Patient;
 import com.hms.service.PatientService;
@@ -45,7 +46,7 @@ public class PatientController {
     })
     public ResponseEntity<ApiResponse> getAllPatients() {
         List<Patient> patients = patientService.getAllPatients();
-        return ResponseEntity.ok(new ApiResponse("Patients retrieved successfully", patients, true));
+        return ResponseEntity.ok(new ApiResponse("Patients retrieved successfully", PatientResponse.from(patients), true));
     }
 
     /**
@@ -73,7 +74,7 @@ public class PatientController {
                     .body(new ApiResponse("Patient not found", false));
         }
 
-        return ResponseEntity.ok(new ApiResponse("Patient retrieved successfully", patient.get(), true));
+        return ResponseEntity.ok(new ApiResponse("Patient retrieved successfully", PatientResponse.from(patient.get()), true));
     }
 
     /**
@@ -93,7 +94,7 @@ public class PatientController {
             @Parameter(description = "First name to search for", required = true)
             @PathVariable String firstName) {
         List<Patient> patients = patientService.searchByFirstName(firstName);
-        return ResponseEntity.ok(new ApiResponse("Search results", patients, true));
+        return ResponseEntity.ok(new ApiResponse("Search results", PatientResponse.from(patients), true));
     }
 
     /**
@@ -113,7 +114,7 @@ public class PatientController {
             @Parameter(description = "Last name to search for", required = true)
             @PathVariable String lastName) {
         List<Patient> patients = patientService.searchByLastName(lastName);
-        return ResponseEntity.ok(new ApiResponse("Search results", patients, true));
+        return ResponseEntity.ok(new ApiResponse("Search results", PatientResponse.from(patients), true));
     }
 
     /**
@@ -133,7 +134,7 @@ public class PatientController {
             @Parameter(description = "City to search for", required = true)
             @PathVariable String city) {
         List<Patient> patients = patientService.searchByCity(city);
-        return ResponseEntity.ok(new ApiResponse("Search results", patients, true));
+        return ResponseEntity.ok(new ApiResponse("Search results", PatientResponse.from(patients), true));
     }
 
     /**
@@ -234,7 +235,7 @@ public class PatientController {
             @Parameter(description = "Page size (1-100, default 10)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Patient> response = patientService.getAllPatientsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Patients retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Patients retrieved successfully", PatientResponse.from(response), true));
     }
 
     /**
@@ -257,7 +258,7 @@ public class PatientController {
             @Parameter(description = "Page size (1-100, default 10)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Patient> response = patientService.searchByFirstNamePaginated(firstName, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Search results retrieved", response, true));
+        return ResponseEntity.ok(new ApiResponse("Search results retrieved", PatientResponse.from(response), true));
     }
 
     /**
@@ -280,7 +281,7 @@ public class PatientController {
             @Parameter(description = "Page size (1-100, default 10)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Patient> response = patientService.searchByLastNamePaginated(lastName, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Search results retrieved", response, true));
+        return ResponseEntity.ok(new ApiResponse("Search results retrieved", PatientResponse.from(response), true));
     }
 
     /**
@@ -303,6 +304,6 @@ public class PatientController {
             @Parameter(description = "Page size (1-100, default 10)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Patient> response = patientService.searchByCityPaginated(city, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Search results retrieved", response, true));
+        return ResponseEntity.ok(new ApiResponse("Search results retrieved", PatientResponse.from(response), true));
     }
 }
