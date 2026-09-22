@@ -7,6 +7,7 @@ import com.hms.security.RateLimitFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -25,6 +26,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
 
 @Configuration
 @EnableWebSecurity
@@ -35,6 +38,10 @@ import java.util.Arrays;
 )
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    /** Comma-separated extra origins, for wherever the frontend is deployed. */
+    @Value("${hms.security.cors.allowed-origins:}")
+    private String allowedOrigins;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitFilter rateLimitFilter;
@@ -142,14 +149,36 @@ public class SecurityConfig {
      * Allow requests from React frontend (localhost:3000, localhost:3002)
      */
     @Bean
+    /**
+     * Which origins the browser may call this API from.
+     *
+     * The two localhost ports are the development frontend. A deployed
+     * frontend lives on a domain nobody knows at build time, so the list is
+     * extended from CORS_ALLOWED_ORIGINS - comma-separated - rather than
+     * hardcoded. Without that, a deployed UI is blocked by the browser before
+     * a single request is sent.
+     *
+     * Deliberately not "*": allowCredentials is true, and a wildcard origin
+     * with credentials is both rejected by browsers and wrong in principle -
+     * it would let any site on the internet make authenticated calls on a
+     * logged-in user's behalf.
+     */
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow requests from React frontend
-        configuration.setAllowedOrigins(Arrays.asList(
+        List<String> origins = new ArrayList<>(List.of(
             "http://localhost:3000",
             "http://localhost:3002"
         ));
+
+        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(origin -> !origin.isEmpty())
+                    .forEach(origins::add);
+        }
+
+        configuration.setAllowedOrigins(origins);
 
         // Allow HTTP methods
         configuration.setAllowedMethods(Arrays.asList(
