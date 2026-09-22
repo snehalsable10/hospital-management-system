@@ -44,10 +44,14 @@ public class UserService {
      */
     private static final String INVALID_CREDENTIALS = "Invalid email or password";
 
+    /** One answer for every refusal, for the same reason as the login message. */
+    private static final String INVALID_REFRESH = "Session expired - please sign in again";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final LoginAttemptService loginAttemptService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * Register a new user (Signup)
@@ -163,10 +167,13 @@ public class UserService {
             loginAttemptService.reset(email);
 
             String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(
+                    user.getId(), user.getUsername(), user.getRole());
 
             AuthResponse authResponse = AuthResponse.builder()
                     .message("Login successful")
                     .token(token)
+                    .refreshToken(refreshToken)
                     .userId(user.getId())
                     .username(user.getUsername())
                     .email(user.getEmail())
@@ -334,5 +341,61 @@ public class UserService {
         }
     }
 
+
+
+    /**
+     * Exchange a refresh token for a fresh pair.
+     *
+     * The old refresh token is revoked as part of the exchange, so each one
+     * works exactly once. If a stolen token is used, the legitimate holder's
+     * next refresh fails and the theft surfaces, rather than both parties
+     * quietly sharing a session for a week.
+     *
+     * @throws IllegalArgumentException if the token is missing, not a refresh
+     *                                  token, expired, or already used
+     */
+    public ApiResponse refresh(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new IllegalArgumentException(INVALID_REFRESH);
+        }
+        if (!jwtTokenProvider.isRefreshToken(refreshToken)
+                || !jwtTokenProvider.validateToken(refreshToken)) {
+            throw new IllegalArgumentException(INVALID_REFRESH);
+        }
+        // Already spent, or revoked by a logout.
+        if (tokenBlacklistService.isTokenBlacklisted(refreshToken)) {
+            throw new IllegalArgumentException(INVALID_REFRESH);
+        }
+
+        Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+        User user = userRepository.findById(userId)
+                .filter(User::getIsActive)
+                .orElseThrow(() -> new IllegalArgumentException(INVALID_REFRESH));
+
+        // The caller's role may have changed, or been revoked, since the
+        // refresh token was issued; the new access token reflects the account
+        // as it is now rather than as it was.
+        String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole());
+        String rotated = jwtTokenProvider.generateRefreshToken(
+                user.getId(), user.getUsername(), user.getRole());
+
+        // Spend the old one. Each refresh token works exactly once.
+        tokenBlacklistService.blacklistToken(refreshToken);
+
+        AuthResponse response = AuthResponse.builder()
+                .message("Token refreshed")
+                .token(token)
+                .refreshToken(rotated)
+                .userId(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(user.getRole())
+                .success(true)
+                .build();
+
+        return new ApiResponse("Token refreshed", response, true);
+    }
 
 }

@@ -43,7 +43,7 @@ spring.jpa.properties.hibernate.format_sql=true
 # IMPORTANT: This is a development key only
 # For production, use a strong random 256-bit key from environment variable
 jwt.secret=${JWT_SECRET:dev_secret_key_do_not_use_in_production_this_is_only_for_local_testing_12345678}
-jwt.expiration=86400000
+jwt.expiration=1800000
 
 # ====================================
 # Logging Configuration - DEV
@@ -167,3 +167,10 @@ hms.security.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:}
 hms.bootstrap.admin.email=${HMS_ADMIN_EMAIL:}
 hms.bootstrap.admin.password=${HMS_ADMIN_PASSWORD:}
 hms.bootstrap.admin.username=${HMS_ADMIN_USERNAME:admin}
+
+# Access tokens are short-lived because they travel on every request; the
+# client swaps an expired one for a fresh pair at /api/auth/refresh. The
+# refresh token is long-lived but single-use - each exchange revokes the one
+# presented - so a stolen one stops working the moment the legitimate holder
+# refreshes.
+jwt.refresh-expiration=${JWT_REFRESH_EXPIRATION:604800000}

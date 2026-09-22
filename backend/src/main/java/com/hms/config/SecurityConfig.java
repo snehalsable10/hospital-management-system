@@ -75,6 +75,9 @@ public class SecurityConfig {
                         // Public endpoints - no authentication required
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/signup").permitAll()
+                        // The caller's access token has expired by definition;
+                        // demanding a valid one would defeat the endpoint.
+                        .requestMatchers("/api/auth/refresh").permitAll()
                         .requestMatchers("/api/auth/health").permitAll()
 
                         // Health probe must be reachable by the platform's health check.

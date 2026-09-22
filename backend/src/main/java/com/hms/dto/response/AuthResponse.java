@@ -13,6 +13,9 @@ public class AuthResponse {
 
     private String message;
     private String token;
+
+    /** Long-lived, and only good for obtaining a new access token. */
+    private String refreshToken;
     private Long userId;
     private String username;
     private String email;

@@ -14,6 +14,11 @@ const authService = {
     if (apiResponse.success && apiResponse.data) {
       const auth = apiResponse.data;
       localStorage.setItem('token', auth.token);
+      // Long-lived and single-use; api.js swaps it for a fresh pair when the
+      // access token expires.
+      if (auth.refreshToken) {
+        localStorage.setItem('refreshToken', auth.refreshToken);
+      }
       localStorage.setItem('user', JSON.stringify({
         userId: auth.userId,
         username: auth.username,
@@ -39,6 +44,7 @@ const authService = {
       // Already logging out; nothing useful to do with the error.
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
     }
   },

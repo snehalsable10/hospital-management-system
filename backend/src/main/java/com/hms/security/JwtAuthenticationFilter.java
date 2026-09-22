@@ -46,6 +46,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         return;
                     }
 
+                    // A refresh token is long-lived and exists only to obtain
+                    // an access token. Accepting one here would put a
+                    // seven-day credential in every request header.
+                    if (!jwtTokenProvider.isAccessToken(token)) {
+                        log.warn("Refresh token presented as an access token");
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
                     // Validate token (expiration, signature, etc)
                     if (jwtTokenProvider.validateToken(token)) {
                         // Extract user information from token

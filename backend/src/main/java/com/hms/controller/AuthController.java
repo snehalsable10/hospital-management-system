@@ -3,6 +3,7 @@ package com.hms.controller;
 import com.hms.audit.AuditService;
 import com.hms.dto.request.CreateUserRequest;
 import com.hms.dto.request.LoginRequest;
+import com.hms.dto.request.RefreshRequest;
 import com.hms.dto.request.SignupRequest;
 import com.hms.dto.response.ApiResponse;
 import com.hms.entity.User;
@@ -88,6 +89,26 @@ public class AuthController {
             auditService.loginFailed(loginRequest.getEmail(), ip);
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+
+    /**
+     * POST /api/auth/refresh - Exchange a refresh token for a new pair
+     *
+     * Public, because the caller's access token has expired by definition -
+     * requiring a valid one would defeat the purpose. The refresh token is the
+     * credential, and it is checked as one.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        try {
+            return ResponseEntity.ok(userService.refresh(request.getRefreshToken()));
+        } catch (IllegalArgumentException e) {
+            // 401, not 400: the client's answer is to sign in again, which is
+            // what its interceptor does with a 401.
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse(e.getMessage(), false));
+        }
     }
 
     /**
