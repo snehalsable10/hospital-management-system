@@ -2,6 +2,7 @@ package com.hms.controller;
 
 import com.hms.dto.request.BillRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.BillResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Bill;
 import com.hms.service.BillService;
@@ -47,7 +48,7 @@ public class BillController {
     })
     public ResponseEntity<ApiResponse> getAllBills() {
         List<Bill> bills = billService.getAllBills();
-        return ResponseEntity.ok(new ApiResponse("Bills retrieved successfully", bills, true));
+        return ResponseEntity.ok(new ApiResponse("Bills retrieved successfully", BillResponse.from(bills), true));
     }
 
     /**
@@ -73,7 +74,7 @@ public class BillController {
                     .body(new ApiResponse("Bill not found", false));
         }
 
-        return ResponseEntity.ok(new ApiResponse("Bill retrieved successfully", bill.get(), true));
+        return ResponseEntity.ok(new ApiResponse("Bill retrieved successfully", BillResponse.from(bill.get()), true));
     }
 
     /**
@@ -84,7 +85,7 @@ public class BillController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF') or @authService.isOwnPatient(#patientId)")
     public ResponseEntity<ApiResponse> getBillsByPatient(@PathVariable Long patientId) {
         List<Bill> bills = billService.getBillsByPatient(patientId);
-        return ResponseEntity.ok(new ApiResponse("Patient bills retrieved successfully", bills, true));
+        return ResponseEntity.ok(new ApiResponse("Patient bills retrieved successfully", BillResponse.from(bills), true));
     }
 
     /**
@@ -95,7 +96,7 @@ public class BillController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF') or @authService.isOwnDoctor(#doctorId)")
     public ResponseEntity<ApiResponse> getBillsByDoctor(@PathVariable Long doctorId) {
         List<Bill> bills = billService.getBillsByDoctor(doctorId);
-        return ResponseEntity.ok(new ApiResponse("Doctor bills retrieved successfully", bills, true));
+        return ResponseEntity.ok(new ApiResponse("Doctor bills retrieved successfully", BillResponse.from(bills), true));
     }
 
     /**
@@ -106,7 +107,7 @@ public class BillController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse> getBillsByStatus(@PathVariable String status) {
         List<Bill> bills = billService.getBillsByStatus(status);
-        return ResponseEntity.ok(new ApiResponse("Bills retrieved by status successfully", bills, true));
+        return ResponseEntity.ok(new ApiResponse("Bills retrieved by status successfully", BillResponse.from(bills), true));
     }
 
     /**
@@ -119,7 +120,7 @@ public class BillController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         List<Bill> bills = billService.getBillsByDateRange(startDate, endDate);
-        return ResponseEntity.ok(new ApiResponse("Bills retrieved by date range successfully", bills, true));
+        return ResponseEntity.ok(new ApiResponse("Bills retrieved by date range successfully", BillResponse.from(bills), true));
     }
 
     /**
@@ -130,7 +131,7 @@ public class BillController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF') or @authService.isOwnPatient(#patientId)")
     public ResponseEntity<ApiResponse> getPatientUnpaidBills(@PathVariable Long patientId) {
         List<Bill> bills = billService.getPatientUnpaidBills(patientId);
-        return ResponseEntity.ok(new ApiResponse("Patient unpaid bills retrieved successfully", bills, true));
+        return ResponseEntity.ok(new ApiResponse("Patient unpaid bills retrieved successfully", BillResponse.from(bills), true));
     }
 
     /**
@@ -141,7 +142,7 @@ public class BillController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF') or @authService.isOwnDoctor(#doctorId)")
     public ResponseEntity<ApiResponse> getDoctorPaidBills(@PathVariable Long doctorId) {
         List<Bill> bills = billService.getDoctorPaidBills(doctorId);
-        return ResponseEntity.ok(new ApiResponse("Doctor paid bills retrieved successfully", bills, true));
+        return ResponseEntity.ok(new ApiResponse("Doctor paid bills retrieved successfully", BillResponse.from(bills), true));
     }
 
     /**
@@ -224,7 +225,7 @@ public class BillController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Bill> response = billService.getAllBillsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Bills retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Bills retrieved successfully", BillResponse.from(response), true));
     }
 
     /**
@@ -247,7 +248,7 @@ public class BillController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Bill> response = billService.getBillsByPatientPaginated(patientId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Patient bills retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Patient bills retrieved successfully", BillResponse.from(response), true));
     }
 
     /**
@@ -270,7 +271,7 @@ public class BillController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Bill> response = billService.getBillsByDoctorPaginated(doctorId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Doctor bills retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Doctor bills retrieved successfully", BillResponse.from(response), true));
     }
 
     /**
@@ -293,7 +294,7 @@ public class BillController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Bill> response = billService.getBillsByStatusPaginated(status, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Bills retrieved by status successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Bills retrieved by status successfully", BillResponse.from(response), true));
     }
 
     /**
@@ -318,7 +319,7 @@ public class BillController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Bill> response = billService.getBillsByDateRangePaginated(startDate, endDate, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Bills retrieved by date range successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Bills retrieved by date range successfully", BillResponse.from(response), true));
     }
 
     /**
@@ -341,6 +342,6 @@ public class BillController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Bill> response = billService.getPatientUnpaidBillsPaginated(patientId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Patient unpaid bills retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Patient unpaid bills retrieved successfully", BillResponse.from(response), true));
     }
 }

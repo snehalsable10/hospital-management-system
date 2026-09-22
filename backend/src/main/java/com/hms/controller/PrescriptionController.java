@@ -2,6 +2,7 @@ package com.hms.controller;
 
 import com.hms.dto.request.PrescriptionRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.PrescriptionResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Prescription;
 import com.hms.service.PrescriptionService;
@@ -45,7 +46,7 @@ public class PrescriptionController {
     })
     public ResponseEntity<ApiResponse> getAllPrescriptions() {
         List<Prescription> prescriptions = prescriptionService.getAllPrescriptions();
-        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved successfully", prescriptions, true));
+        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved successfully", PrescriptionResponse.from(prescriptions), true));
     }
 
     /**
@@ -72,7 +73,7 @@ public class PrescriptionController {
                     .body(new ApiResponse("Prescription not found", false));
         }
 
-        return ResponseEntity.ok(new ApiResponse("Prescription retrieved successfully", prescription.get(), true));
+        return ResponseEntity.ok(new ApiResponse("Prescription retrieved successfully", PrescriptionResponse.from(prescription.get()), true));
     }
 
     /**
@@ -90,7 +91,7 @@ public class PrescriptionController {
             @Parameter(description = "Appointment ID", required = true)
             @PathVariable Long appointmentId) {
         List<Prescription> prescriptions = prescriptionService.getPrescriptionsByAppointment(appointmentId);
-        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved successfully", prescriptions, true));
+        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved successfully", PrescriptionResponse.from(prescriptions), true));
     }
 
     /**
@@ -110,7 +111,7 @@ public class PrescriptionController {
             @Parameter(description = "Patient ID", required = true)
             @PathVariable Long patientId) {
         List<Prescription> prescriptions = prescriptionService.getPrescriptionsByPatient(patientId);
-        return ResponseEntity.ok(new ApiResponse("Patient prescriptions retrieved successfully", prescriptions, true));
+        return ResponseEntity.ok(new ApiResponse("Patient prescriptions retrieved successfully", PrescriptionResponse.from(prescriptions), true));
     }
 
     /**
@@ -130,7 +131,7 @@ public class PrescriptionController {
             @Parameter(description = "Doctor ID", required = true)
             @PathVariable Long doctorId) {
         List<Prescription> prescriptions = prescriptionService.getPrescriptionsByDoctor(doctorId);
-        return ResponseEntity.ok(new ApiResponse("Doctor prescriptions retrieved successfully", prescriptions, true));
+        return ResponseEntity.ok(new ApiResponse("Doctor prescriptions retrieved successfully", PrescriptionResponse.from(prescriptions), true));
     }
 
     /**
@@ -150,7 +151,7 @@ public class PrescriptionController {
             @Parameter(description = "Status (ACTIVE, EXPIRED, COMPLETED)", required = true)
             @PathVariable String status) {
         List<Prescription> prescriptions = prescriptionService.getPrescriptionsByStatus(status);
-        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved by status successfully", prescriptions, true));
+        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved by status successfully", PrescriptionResponse.from(prescriptions), true));
     }
 
     /**
@@ -238,7 +239,7 @@ public class PrescriptionController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Prescription> response = prescriptionService.getAllPrescriptionsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved successfully", PrescriptionResponse.from(response), true));
     }
 
     /**
@@ -261,7 +262,7 @@ public class PrescriptionController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Prescription> response = prescriptionService.getPrescriptionsByAppointmentPaginated(appointmentId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved successfully", PrescriptionResponse.from(response), true));
     }
 
     /**
@@ -284,7 +285,7 @@ public class PrescriptionController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Prescription> response = prescriptionService.getPrescriptionsByPatientPaginated(patientId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Patient prescriptions retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Patient prescriptions retrieved successfully", PrescriptionResponse.from(response), true));
     }
 
     /**
@@ -307,7 +308,7 @@ public class PrescriptionController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Prescription> response = prescriptionService.getPrescriptionsByDoctorPaginated(doctorId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Doctor prescriptions retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Doctor prescriptions retrieved successfully", PrescriptionResponse.from(response), true));
     }
 
     /**
@@ -330,6 +331,6 @@ public class PrescriptionController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Prescription> response = prescriptionService.getPrescriptionsByStatusPaginated(status, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved by status successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Prescriptions retrieved by status successfully", PrescriptionResponse.from(response), true));
     }
 }

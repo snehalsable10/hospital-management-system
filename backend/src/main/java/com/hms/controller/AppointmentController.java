@@ -3,6 +3,7 @@ package com.hms.controller;
 import com.hms.dto.request.AppointmentRequest;
 import com.hms.dto.request.OnCreate;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.AppointmentResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Appointment;
 import com.hms.service.AppointmentService;
@@ -51,7 +52,7 @@ public class AppointmentController {
     })
     public ResponseEntity<ApiResponse> getAllAppointments() {
         List<Appointment> appointments = appointmentService.getAllAppointments();
-        return ResponseEntity.ok(new ApiResponse("Appointments retrieved successfully", appointments, true));
+        return ResponseEntity.ok(new ApiResponse("Appointments retrieved successfully", AppointmentResponse.from(appointments), true));
     }
 
     /**
@@ -79,7 +80,7 @@ public class AppointmentController {
                     .body(new ApiResponse("Appointment not found", false));
         }
 
-        return ResponseEntity.ok(new ApiResponse("Appointment retrieved successfully", appointment.get(), true));
+        return ResponseEntity.ok(new ApiResponse("Appointment retrieved successfully", AppointmentResponse.from(appointment.get()), true));
     }
 
     /**
@@ -99,7 +100,7 @@ public class AppointmentController {
             @Parameter(description = "Patient ID", required = true)
             @PathVariable Long patientId) {
         List<Appointment> appointments = appointmentService.getAppointmentsByPatient(patientId);
-        return ResponseEntity.ok(new ApiResponse("Patient appointments retrieved successfully", appointments, true));
+        return ResponseEntity.ok(new ApiResponse("Patient appointments retrieved successfully", AppointmentResponse.from(appointments), true));
     }
 
     /**
@@ -119,7 +120,7 @@ public class AppointmentController {
             @Parameter(description = "Doctor ID", required = true)
             @PathVariable Long doctorId) {
         List<Appointment> appointments = appointmentService.getAppointmentsByDoctor(doctorId);
-        return ResponseEntity.ok(new ApiResponse("Doctor appointments retrieved successfully", appointments, true));
+        return ResponseEntity.ok(new ApiResponse("Doctor appointments retrieved successfully", AppointmentResponse.from(appointments), true));
     }
 
     /**
@@ -139,7 +140,7 @@ public class AppointmentController {
             @Parameter(description = "Status (SCHEDULED, COMPLETED, CANCELLED)", required = true)
             @PathVariable String status) {
         List<Appointment> appointments = appointmentService.getAppointmentsByStatus(status);
-        return ResponseEntity.ok(new ApiResponse("Appointments retrieved by status successfully", appointments, true));
+        return ResponseEntity.ok(new ApiResponse("Appointments retrieved by status successfully", AppointmentResponse.from(appointments), true));
     }
 
     /**
@@ -161,7 +162,7 @@ public class AppointmentController {
             @Parameter(description = "End date (YYYY-MM-DD)", required = true)
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         List<Appointment> appointments = appointmentService.getAppointmentsByDateRange(startDate, endDate);
-        return ResponseEntity.ok(new ApiResponse("Appointments retrieved by date range successfully", appointments, true));
+        return ResponseEntity.ok(new ApiResponse("Appointments retrieved by date range successfully", AppointmentResponse.from(appointments), true));
     }
 
     /**
@@ -249,7 +250,7 @@ public class AppointmentController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Appointment> response = appointmentService.getAllAppointmentsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Appointments retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Appointments retrieved successfully", AppointmentResponse.from(response), true));
     }
 
     /**
@@ -272,7 +273,7 @@ public class AppointmentController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Appointment> response = appointmentService.getAppointmentsByPatientPaginated(patientId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Patient appointments retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Patient appointments retrieved successfully", AppointmentResponse.from(response), true));
     }
 
     /**
@@ -295,7 +296,7 @@ public class AppointmentController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Appointment> response = appointmentService.getAppointmentsByDoctorPaginated(doctorId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Doctor appointments retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Doctor appointments retrieved successfully", AppointmentResponse.from(response), true));
     }
 
     /**
@@ -318,7 +319,7 @@ public class AppointmentController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Appointment> response = appointmentService.getAppointmentsByStatusPaginated(status, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Appointments retrieved by status successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Appointments retrieved by status successfully", AppointmentResponse.from(response), true));
     }
 
     /**
@@ -343,6 +344,6 @@ public class AppointmentController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Appointment> response = appointmentService.getAppointmentsByDateRangePaginated(startDate, endDate, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Appointments retrieved by date range successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Appointments retrieved by date range successfully", AppointmentResponse.from(response), true));
     }
 }

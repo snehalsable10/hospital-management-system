@@ -2,6 +2,7 @@ package com.hms.controller;
 
 import com.hms.dto.request.MedicalHistoryRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.MedicalHistoryResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.MedicalHistory;
 import com.hms.service.MedicalHistoryService;
@@ -45,7 +46,7 @@ public class MedicalHistoryController {
     })
     public ResponseEntity<ApiResponse> getAllMedicalHistories() {
         List<MedicalHistory> histories = medicalHistoryService.getAllMedicalHistories();
-        return ResponseEntity.ok(new ApiResponse("Medical histories retrieved successfully", histories, true));
+        return ResponseEntity.ok(new ApiResponse("Medical histories retrieved successfully", MedicalHistoryResponse.from(histories), true));
     }
 
     /**
@@ -72,7 +73,7 @@ public class MedicalHistoryController {
                     .body(new ApiResponse("Medical history not found", false));
         }
 
-        return ResponseEntity.ok(new ApiResponse("Medical history retrieved successfully", history.get(), true));
+        return ResponseEntity.ok(new ApiResponse("Medical history retrieved successfully", MedicalHistoryResponse.from(history.get()), true));
     }
 
     /**
@@ -92,7 +93,7 @@ public class MedicalHistoryController {
             @Parameter(description = "Patient ID", required = true)
             @PathVariable Long patientId) {
         List<MedicalHistory> histories = medicalHistoryService.getMedicalHistoriesByPatient(patientId);
-        return ResponseEntity.ok(new ApiResponse("Patient medical histories retrieved successfully", histories, true));
+        return ResponseEntity.ok(new ApiResponse("Patient medical histories retrieved successfully", MedicalHistoryResponse.from(histories), true));
     }
 
     /**
@@ -112,7 +113,7 @@ public class MedicalHistoryController {
             @Parameter(description = "Status (ACTIVE, RESOLVED, ONGOING)", required = true)
             @PathVariable String status) {
         List<MedicalHistory> histories = medicalHistoryService.getMedicalHistoriesByStatus(status);
-        return ResponseEntity.ok(new ApiResponse("Medical histories retrieved by status successfully", histories, true));
+        return ResponseEntity.ok(new ApiResponse("Medical histories retrieved by status successfully", MedicalHistoryResponse.from(histories), true));
     }
 
     /**
@@ -132,7 +133,7 @@ public class MedicalHistoryController {
             @Parameter(description = "Condition name to search for", required = true)
             @PathVariable String conditionName) {
         List<MedicalHistory> histories = medicalHistoryService.searchByConditionName(conditionName);
-        return ResponseEntity.ok(new ApiResponse("Search results retrieved successfully", histories, true));
+        return ResponseEntity.ok(new ApiResponse("Search results retrieved successfully", MedicalHistoryResponse.from(histories), true));
     }
 
     /**
@@ -220,7 +221,7 @@ public class MedicalHistoryController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<MedicalHistory> response = medicalHistoryService.getAllMedicalHistoriesPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Medical histories retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Medical histories retrieved successfully", MedicalHistoryResponse.from(response), true));
     }
 
     /**
@@ -243,7 +244,7 @@ public class MedicalHistoryController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<MedicalHistory> response = medicalHistoryService.getMedicalHistoriesByPatientPaginated(patientId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Patient medical histories retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Patient medical histories retrieved successfully", MedicalHistoryResponse.from(response), true));
     }
 
     /**
@@ -266,7 +267,7 @@ public class MedicalHistoryController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<MedicalHistory> response = medicalHistoryService.getMedicalHistoriesByStatusPaginated(status, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Medical histories retrieved by status successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Medical histories retrieved by status successfully", MedicalHistoryResponse.from(response), true));
     }
 
     /**
@@ -289,6 +290,6 @@ public class MedicalHistoryController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<MedicalHistory> response = medicalHistoryService.searchByConditionNamePaginated(conditionName, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Search results retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Search results retrieved successfully", MedicalHistoryResponse.from(response), true));
     }
 }

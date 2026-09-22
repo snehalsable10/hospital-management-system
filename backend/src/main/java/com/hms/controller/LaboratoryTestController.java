@@ -2,6 +2,7 @@ package com.hms.controller;
 
 import com.hms.dto.request.LaboratoryTestRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.LaboratoryTestResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.LaboratoryTest;
 import com.hms.service.LaboratoryTestService;
@@ -47,7 +48,7 @@ public class LaboratoryTestController {
     })
     public ResponseEntity<ApiResponse> getAllLaboratoryTests() {
         List<LaboratoryTest> tests = laboratoryTestService.getAllLaboratoryTests();
-        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved successfully", tests, true));
+        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved successfully", LaboratoryTestResponse.from(tests), true));
     }
 
     /**
@@ -74,7 +75,7 @@ public class LaboratoryTestController {
                     .body(new ApiResponse("Laboratory test not found", false));
         }
 
-        return ResponseEntity.ok(new ApiResponse("Laboratory test retrieved successfully", test.get(), true));
+        return ResponseEntity.ok(new ApiResponse("Laboratory test retrieved successfully", LaboratoryTestResponse.from(test.get()), true));
     }
 
     /**
@@ -94,7 +95,7 @@ public class LaboratoryTestController {
             @Parameter(description = "Patient ID", required = true)
             @PathVariable Long patientId) {
         List<LaboratoryTest> tests = laboratoryTestService.getLaboratoryTestsByPatient(patientId);
-        return ResponseEntity.ok(new ApiResponse("Patient laboratory tests retrieved successfully", tests, true));
+        return ResponseEntity.ok(new ApiResponse("Patient laboratory tests retrieved successfully", LaboratoryTestResponse.from(tests), true));
     }
 
     /**
@@ -114,7 +115,7 @@ public class LaboratoryTestController {
             @Parameter(description = "Status (NORMAL, ABNORMAL, PENDING)", required = true)
             @PathVariable String status) {
         List<LaboratoryTest> tests = laboratoryTestService.getLaboratoryTestsByStatus(status);
-        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved by status successfully", tests, true));
+        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved by status successfully", LaboratoryTestResponse.from(tests), true));
     }
 
     /**
@@ -134,7 +135,7 @@ public class LaboratoryTestController {
             @Parameter(description = "Test name to search for", required = true)
             @PathVariable String testName) {
         List<LaboratoryTest> tests = laboratoryTestService.searchByTestName(testName);
-        return ResponseEntity.ok(new ApiResponse("Search results retrieved successfully", tests, true));
+        return ResponseEntity.ok(new ApiResponse("Search results retrieved successfully", LaboratoryTestResponse.from(tests), true));
     }
 
     /**
@@ -156,7 +157,7 @@ public class LaboratoryTestController {
             @Parameter(description = "End date (YYYY-MM-DD)", required = true)
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         List<LaboratoryTest> tests = laboratoryTestService.getLaboratoryTestsByDateRange(startDate, endDate);
-        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved by date range successfully", tests, true));
+        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved by date range successfully", LaboratoryTestResponse.from(tests), true));
     }
 
     /**
@@ -244,7 +245,7 @@ public class LaboratoryTestController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<LaboratoryTest> response = laboratoryTestService.getAllLaboratoryTestsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved successfully", LaboratoryTestResponse.from(response), true));
     }
 
     /**
@@ -267,7 +268,7 @@ public class LaboratoryTestController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<LaboratoryTest> response = laboratoryTestService.getLaboratoryTestsByPatientPaginated(patientId, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Patient laboratory tests retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Patient laboratory tests retrieved successfully", LaboratoryTestResponse.from(response), true));
     }
 
     /**
@@ -290,7 +291,7 @@ public class LaboratoryTestController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<LaboratoryTest> response = laboratoryTestService.getLaboratoryTestsByStatusPaginated(status, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved by status successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved by status successfully", LaboratoryTestResponse.from(response), true));
     }
 
     /**
@@ -313,7 +314,7 @@ public class LaboratoryTestController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<LaboratoryTest> response = laboratoryTestService.searchByTestNamePaginated(testName, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Search results retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Search results retrieved successfully", LaboratoryTestResponse.from(response), true));
     }
 
     /**
@@ -338,6 +339,6 @@ public class LaboratoryTestController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<LaboratoryTest> response = laboratoryTestService.getLaboratoryTestsByDateRangePaginated(startDate, endDate, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved by date range successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Laboratory tests retrieved by date range successfully", LaboratoryTestResponse.from(response), true));
     }
 }

@@ -2,6 +2,7 @@ package com.hms.controller;
 
 import com.hms.dto.request.DepartmentRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.DepartmentResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Department;
 import com.hms.service.DepartmentService;
@@ -44,7 +45,7 @@ public class DepartmentController {
     })
     public ResponseEntity<ApiResponse> getAllDepartments() {
         List<Department> departments = departmentService.getAllDepartments();
-        return ResponseEntity.ok(new ApiResponse("Departments retrieved successfully", departments, true));
+        return ResponseEntity.ok(new ApiResponse("Departments retrieved successfully", DepartmentResponse.from(departments), true));
     }
 
     /**
@@ -70,7 +71,7 @@ public class DepartmentController {
                     .body(new ApiResponse("Department not found", false));
         }
 
-        return ResponseEntity.ok(new ApiResponse("Department retrieved successfully", department.get(), true));
+        return ResponseEntity.ok(new ApiResponse("Department retrieved successfully", DepartmentResponse.from(department.get()), true));
     }
 
     /**
@@ -168,6 +169,6 @@ public class DepartmentController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Department> response = departmentService.getAllDepartmentsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Departments retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Departments retrieved successfully", DepartmentResponse.from(response), true));
     }
 }

@@ -2,6 +2,7 @@ package com.hms.controller;
 
 import com.hms.dto.request.RoomRequest;
 import com.hms.dto.response.ApiResponse;
+import com.hms.dto.response.RoomResponse;
 import com.hms.dto.response.PageResponse;
 import com.hms.entity.Room;
 import com.hms.service.RoomService;
@@ -44,7 +45,7 @@ public class RoomController {
     })
     public ResponseEntity<ApiResponse> getAllRooms() {
         List<Room> rooms = roomService.getAllRooms();
-        return ResponseEntity.ok(new ApiResponse("Rooms retrieved successfully", rooms, true));
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved successfully", RoomResponse.from(rooms), true));
     }
 
     /**
@@ -56,7 +57,7 @@ public class RoomController {
     public ResponseEntity<ApiResponse> getRoomById(@PathVariable Long id) {
         Optional<Room> room = roomService.getRoomById(id);
         if (room.isPresent()) {
-            return ResponseEntity.ok(new ApiResponse("Room retrieved successfully", room.get(), true));
+            return ResponseEntity.ok(new ApiResponse("Room retrieved successfully", RoomResponse.from(room.get()), true));
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse("Room not found", false));
@@ -71,7 +72,7 @@ public class RoomController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getRoomsByType(@PathVariable String roomType) {
         List<Room> rooms = roomService.getRoomsByType(roomType);
-        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by type successfully", rooms, true));
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by type successfully", RoomResponse.from(rooms), true));
     }
 
     /**
@@ -82,7 +83,7 @@ public class RoomController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getRoomsByWard(@PathVariable String ward) {
         List<Room> rooms = roomService.getRoomsByWard(ward);
-        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by ward successfully", rooms, true));
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by ward successfully", RoomResponse.from(rooms), true));
     }
 
     /**
@@ -93,7 +94,7 @@ public class RoomController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getRoomsByStatus(@PathVariable String status) {
         List<Room> rooms = roomService.getRoomsByStatus(status);
-        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by status successfully", rooms, true));
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by status successfully", RoomResponse.from(rooms), true));
     }
 
     /**
@@ -104,7 +105,7 @@ public class RoomController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getAvailableRooms() {
         List<Room> rooms = roomService.getAvailableRooms();
-        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved successfully", rooms, true));
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved successfully", RoomResponse.from(rooms), true));
     }
 
     /**
@@ -115,7 +116,7 @@ public class RoomController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getAvailableRoomsByType(@PathVariable String roomType) {
         List<Room> rooms = roomService.getAvailableRoomsByType(roomType);
-        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by type successfully", rooms, true));
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by type successfully", RoomResponse.from(rooms), true));
     }
 
     /**
@@ -126,7 +127,7 @@ public class RoomController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'DOCTOR', 'PATIENT')")
     public ResponseEntity<ApiResponse> getAvailableRoomsByWard(@PathVariable String ward) {
         List<Room> rooms = roomService.getAvailableRoomsByWard(ward);
-        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by ward successfully", rooms, true));
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by ward successfully", RoomResponse.from(rooms), true));
     }
 
     /**
@@ -236,7 +237,7 @@ public class RoomController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Room> response = roomService.getAllRoomsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Rooms retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved successfully", RoomResponse.from(response), true));
     }
 
     /**
@@ -259,7 +260,7 @@ public class RoomController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Room> response = roomService.getRoomsByTypePaginated(roomType, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by type successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by type successfully", RoomResponse.from(response), true));
     }
 
     /**
@@ -282,7 +283,7 @@ public class RoomController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Room> response = roomService.getRoomsByWardPaginated(ward, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by ward successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by ward successfully", RoomResponse.from(response), true));
     }
 
     /**
@@ -305,7 +306,7 @@ public class RoomController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Room> response = roomService.getRoomsByStatusPaginated(status, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by status successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Rooms retrieved by status successfully", RoomResponse.from(response), true));
     }
 
     /**
@@ -326,7 +327,7 @@ public class RoomController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Room> response = roomService.getAvailableRoomsPaginated(pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved successfully", RoomResponse.from(response), true));
     }
 
     /**
@@ -349,7 +350,7 @@ public class RoomController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Room> response = roomService.getAvailableRoomsByTypePaginated(roomType, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by type successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by type successfully", RoomResponse.from(response), true));
     }
 
     /**
@@ -372,6 +373,6 @@ public class RoomController {
             @Parameter(description = "Page size (max 100)", required = false)
             @RequestParam(defaultValue = "10") int pageSize) {
         PageResponse<Room> response = roomService.getAvailableRoomsByWardPaginated(ward, pageNumber, pageSize);
-        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by ward successfully", response, true));
+        return ResponseEntity.ok(new ApiResponse("Available rooms retrieved by ward successfully", RoomResponse.from(response), true));
     }
 }
